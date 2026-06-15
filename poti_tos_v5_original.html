@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POTI TOS v5 — კონტეინერების ლოჯისტიკა</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff; --bg2:#f7f9fc; --bg3:#eef2f7; --card:#ffffff;
+  --bd:#dde4ee; --bd2:#c3cedd;
+  --t1:#101828; --t2:#475467; --t3:#98a2b3;
+  --blue:#2563eb; --blue-bg:rgba(37,99,235,.10);
+  --green:#059669; --green-bg:rgba(5,150,105,.10);
+  --amber:#d97706; --amber-bg:rgba(217,119,6,.12);
+  --red:#dc2626; --red-bg:rgba(220,38,38,.10);
+  --purple:#7c3aed; --purple-bg:rgba(124,58,237,.10);
+  --cyan:#0891b2; --cyan-bg:rgba(8,145,178,.10);
+  --medlog:#ea580c; --medlog-bg:rgba(234,88,12,.12);
+  --birzha:#0891b2; --birzha-bg:rgba(8,145,178,.12);
+  --rad:10px; --sh:0 2px 10px rgba(16,24,40,.08); --shl:0 10px 30px rgba(16,24,40,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Times New Roman',Times,serif;background:var(--bg);color:var(--t1);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.hidden{display:none!important}
+
+/* HEADER */
+.hdr{height:54px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;z-index:50}
+.logo{font-weight:700;font-size:16px;color:var(--blue);letter-spacing:.6px}
+.logo em{font-style:normal;color:var(--t3);font-size:11px;margin-left:6px}
+.chip{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.4px;background:var(--blue-bg);color:var(--blue);border:1px solid rgba(37,99,235,.25)}
+.clock{font-size:13px;color:var(--t3);background:var(--bg);padding:5px 12px;border-radius:6px;border:1px solid var(--bd)}
+.btn-out{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,.3);border-radius:8px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* NAV */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--bg);border-bottom:2px solid var(--bd2);padding:7px 18px 0;flex-shrink:0}
+.tab{padding:7px 13px;font-size:12px;font-weight:700;color:var(--t2);background:var(--bg3);cursor:pointer;border-radius:9px 9px 0 0;border:1px solid var(--bd);border-bottom:none;position:relative;bottom:-2px;white-space:nowrap;letter-spacing:.2px}
+.tab:hover{background:#e3e9f2;color:var(--t1)}
+.tab.on{background:#fff;color:var(--blue);border-color:var(--bd2);box-shadow:inset 0 3px 0 0 var(--blue)}
+
+/* VIEWS / LAYOUT */
+.view{display:none;flex:1;overflow:hidden;min-height:0}
+.view.on{display:flex;flex-direction:column;min-height:0}
+.cols{display:flex;gap:14px;flex:1;overflow:hidden;padding:14px 18px;min-height:0}
+.col{display:flex;flex-direction:column;gap:11px;overflow:hidden;min-height:0}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:var(--rad);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.panel.f1{flex:1;min-height:0}
+.phd{padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px}
+.ptt{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--t2);display:flex;align-items:center;gap:7px}
+.pbd{flex:1;overflow-y:auto;padding:11px}
+
+/* FORMS */
+.fr{display:grid;gap:9px}.fr2{grid-template-columns:1fr 1fr}.fr3{grid-template-columns:1fr 1fr 1fr}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--t3)}
+.fi,.fs{background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--t1);font-family:inherit;font-size:13px;outline:none;width:100%}
+.fi:focus,.fs:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+.fi.ok{border-color:var(--green);box-shadow:0 0 0 2px rgba(5,150,105,.15)}
+.fi.bad{border-color:var(--red);box-shadow:0 0 0 2px rgba(220,38,38,.15)}
+textarea.fi{resize:vertical;min-height:70px;font-size:12px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 15px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;letter-spacing:.2px;transition:filter .12s}
+.btn:hover{filter:brightness(.94)}.btn:active{transform:scale(.97)}
+.btn.w{width:100%}.btn.sm{padding:5px 11px;font-size:11px}.btn.xs{padding:3px 8px;font-size:10px;border-radius:6px}
+.b-blue{background:var(--blue);color:#fff}.b-green{background:var(--green);color:#fff}
+.b-red{background:var(--red);color:#fff}.b-amber{background:var(--amber);color:#fff}
+.b-medlog{background:var(--medlog);color:#fff}.b-birzha{background:var(--birzha);color:#fff}
+.b-ghost{background:transparent;color:var(--t2);border:1px solid var(--bd)}
+.b-ghost:hover{background:var(--bg3)}
+
+/* BADGES / STATUS */
+.bdg{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
+.s-pending{background:var(--amber-bg);color:var(--amber)}
+.s-assigned{background:var(--purple-bg);color:var(--purple)}
+.s-arrived{background:var(--cyan-bg);color:var(--cyan)}
+.s-loaded{background:var(--green-bg);color:var(--green)}
+.s-port_arrived{background:rgba(5,150,105,.2);color:#047857;border:1px solid rgba(5,150,105,.35)}
+.s-completed{background:var(--blue-bg);color:var(--blue)}
+.pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.p-medlog{background:var(--medlog-bg);color:var(--medlog);border:1px solid rgba(234,88,12,.3)}
+.p-birzha{background:var(--birzha-bg);color:var(--birzha);border:1px solid rgba(8,145,178,.3)}
+.gate-badge{display:inline-flex;align-items:center;gap:4px;background:#101828;color:#fff;font-weight:800;font-size:12px;padding:3px 10px;border-radius:7px;letter-spacing:.5px}
+
+/* STATS */
+.stats{display:grid;gap:8px}.stats4{grid-template-columns:repeat(4,1fr)}.stats2{grid-template-columns:1fr 1fr}
+.sb{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;text-align:center}
+.sv{font-size:21px;font-weight:800}.sv.amber{color:var(--amber)}.sv.purple{color:var(--purple)}.sv.cyan{color:var(--cyan)}.sv.green{color:var(--green)}.sv.blue{color:var(--blue)}.sv.red{color:var(--red)}
+.sl{font-size:10px;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+
+/* REGULATOR */
+.reg-card{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;background:var(--bg);margin-bottom:10px}
+.reg-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.reg-berth{font-size:15px;font-weight:800}
+.reg-row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--t2)}
+.reg-big{font-size:26px;font-weight:800}
+.reg-action{margin-top:9px;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:800;text-align:center}
+.reg-go{background:var(--green-bg);color:var(--green);border:1px solid rgba(5,150,105,.3)}
+.reg-hold{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,.3)}
+.reg-ok{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(37,99,235,.25)}
+.meter{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:7px}
+.meter>div{height:100%;border-radius:4px;transition:width .4s}
+
+/* LISTS / TABLE */
+.row-item{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.row-item.sel{border-color:var(--blue);background:var(--blue-bg)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg2);color:var(--t3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+td{padding:9px 12px;border-bottom:1px solid var(--bd)}
+.mono{font-weight:700;letter-spacing:.3px}
+.twrap{overflow:auto;flex:1}
+.chip-sm{font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;color:var(--t2);white-space:nowrap}
+.seq-num{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;background:#101828;color:#fff;font-weight:800;font-size:13px}
+
+/* EMPTY / ALERT */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;text-align:center;color:var(--t3);gap:7px}
+.empty .ic{font-size:26px;opacity:.4}
+.alert-bar{background:var(--red-bg);border:1px solid rgba(220,38,38,.35);color:var(--red);border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+
+/* TOAST */
+.toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:6px;z-index:9999}
+.toast{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:11px 15px;display:flex;align-items:flex-start;gap:9px;box-shadow:var(--shl);min-width:270px;max-width:360px;animation:tin .22s ease}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+.tico{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px}
+.t-ok{background:var(--green-bg);color:var(--green)}.t-err{background:var(--red-bg);color:var(--red)}.t-info{background:var(--cyan-bg);color:var(--cyan)}
+.ttl{font-size:13px;font-weight:700}.tms{font-size:11px;color:var(--t2);margin-top:1px}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:9000;background:linear-gradient(160deg,#f7f9fc 0%,#e8eef7 100%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.lbox{background:#fff;border:1px solid var(--bd2);border-radius:16px;padding:32px 36px;width:330px;max-width:94vw;box-shadow:var(--shl);display:flex;flex-direction:column;gap:15px}
+.llogo{font-size:21px;font-weight:700;color:var(--blue);letter-spacing:.8px;text-align:center}
+.llogo em{font-style:normal;color:var(--t3);font-size:12px}
+.lerr{background:var(--red-bg);border:1px solid rgba(220,38,38,.3);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;font-weight:700;text-align:center;display:none}
+.lerr.show{display:block}
+.lhint{font-size:11px;color:var(--t3);text-align:center;line-height:1.7}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(10,15,30,.55);z-index:6000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:14px;padding:22px;width:430px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shl)}
+.mttl{font-size:15px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.mx{background:none;border:none;color:var(--t3);cursor:pointer;font-size:20px;line-height:1}
+
+/* DRIVER */
+.drv-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rad);margin:12px 14px;overflow:hidden}
+.drv-hd{padding:13px 16px;display:flex;align-items:center;justify-content:space-between}
+.drv-bd{padding:16px;display:flex;flex-direction:column;gap:14px}
+.dl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px}
+.dv{font-size:23px;font-weight:700}
+.hr{height:1px;background:var(--bd)}
+.gate-big{display:flex;align-items:center;gap:10px}
+.gate-big .num{font-size:42px;font-weight:800;color:#fff;background:#101828;border-radius:12px;padding:2px 20px;line-height:1.3}
+
+/* MAP */
+#mapwrap{display:flex;flex:1;overflow:hidden;min-height:0}
+#lmap,#zmap{flex:1;min-height:0;z-index:1}
+.map-side{width:290px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.zone-leg{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--t2);margin-right:10px}
+.zone-leg i{display:inline-block;width:11px;height:11px;border-radius:3px}
+@media (max-width:760px){.cols{flex-direction:column;overflow-y:auto}.col{width:100%!important}.map-side{width:200px}}
+</style>
+</head>
+<body>
+
+<!-- ═════════ LOGIN ═════════ -->
+<div id="login">
+  <div class="lbox">
+    <div class="llogo">POTI TOS <em>v5</em></div>
+    <div style="font-size:12px;color:var(--t2);text-align:center;margin-top:-8px">ფოთის პორტი · კონტეინერების ლოჯისტიკა</div>
+    <div class="lerr" id="lerr">❌ არასწორი სახელი ან პაროლი</div>
+    <div class="fg"><label class="fl">მომხმარებელი</label>
+      <input class="fi" id="lu" placeholder="admin / planner / tt1 / bb1..." autocapitalize="none"
+        onkeydown="if(event.key==='Enter')document.getElementById('lp').focus()"></div>
+    <div class="fg"><label class="fl">პაროლი</label>
+      <input class="fi" id="lp" type="password" placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn b-blue w" onclick="doLogin()" style="padding:11px">🔐 შესვლა</button>
+    <div class="lhint">admin · planner · medlog · birzha · terminal · rs7 · rs14<br>მძღოლები: tt1–tt5 (მედლოგი) · bb1–bb5 (ბირჟა) · პაროლი: 1234</div>
+  </div>
+</div>
+
+<!-- ═════════ HEADER ═════════ -->
+<header class="hdr">
+  <div style="display:flex;align-items:center;gap:11px">
+    <div class="logo">POTI TOS<em>v5</em></div>
+    <div class="chip" id="rolechip">—</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:9px">
+    <div class="clock" id="clock">00:00:00</div>
+    <button class="btn-out" onclick="doLogout()">🚪 გამოსვლა</button>
+  </div>
+</header>
+
+<!-- ═════════ TABS ═════════ -->
+<div class="tabs" id="tabs">
+  <div class="tab" data-v="planner"  onclick="go('planner')">👤 პლანერი</div>
+  <div class="tab" data-v="dispatch-medlog" onclick="go('dispatch-medlog')">🟠 დისპეჩერი მედლოგი</div>
+  <div class="tab" data-v="dispatch-birzha" onclick="go('dispatch-birzha')">🔵 დისპეჩერი ბირჟა</div>
+  <div class="tab" data-v="terminal" onclick="go('terminal')">🏭 ტერმინალი</div>
+  <div class="tab" data-v="rs"       onclick="go('rs')">🏗️ RS ოპერატორი</div>
+  <div class="tab" data-v="driver"   onclick="go('driver')">🚛 მძღოლი</div>
+  <div class="tab" data-v="map"      onclick="go('map')">🗺️ ცოცხალი რუკა</div>
+  <div class="tab" data-v="zones"    onclick="go('zones')">📐 ზონები</div>
+  <div class="tab" data-v="registry" onclick="go('registry')">📋 რეესტრი</div>
+  <div class="tab" data-v="archive" onclick="go('archive')">🗄️ გემების არქივი</div>
+  <div class="tab" data-v="settings" onclick="go('settings')">⚙️ პარამეტრები</div>
+</div>
+
+<!-- ═════════ VIEW: PLANNER ═════════ -->
+<div class="view" id="v-planner">
+  <div class="cols">
+    <div class="col" style="width:300px;flex-shrink:0">
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🚢 გემები</div>
+          <button class="btn b-blue xs" onclick="vslOpen()">＋ გემი</button></div>
+        <div class="pbd" id="pl-vessels"></div>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="panel">
+        <div class="phd"><div class="ptt">➕ დავალებების ჯგუფი (ბეი-გეგმის რიგით)</div></div>
+        <div class="pbd" style="padding:13px 15px">
+          <div class="fr fr3" style="margin-bottom:9px">
+            <div class="fg"><label class="fl">გემი</label><select class="fs" id="j-vessel" onchange="jVesselPick()"></select></div>
+            <div class="fg"><label class="fl">ტერმინალი</label><select class="fs" id="j-terminal"></select></div>
+            <div class="fg"><label class="fl">რიგი №(ბეი-გეგმა)</label><input type="number" class="fi" id="j-seq" value="1" min="1" max="99"></div>
+          </div>
+          <div class="fr fr3" style="margin-bottom:9px">
+            <div class="fg"><label class="fl">კონტ. ტიპი</label>
+              <select class="fs" id="j-type"><option>20DC</option><option>40DC</option><option>40HC</option><option>45HC</option><option>20RF</option><option>40RF</option><option>20OT</option><option>40OT</option><option>20FR</option><option>40FR</option><option>20TK</option></select></div>
+            <div class="fg"><label class="fl">სავსე/ცარიელი</label>
+              <select class="fs" id="j-prio"><option value="full">🟫 სავსე</option><option value="empty">⬜ ცარიელი</option></select></div>
+            <div class="fg"><label class="fl">დაცლის პორტი (POD)</label><input class="fi" id="j-pod" placeholder="ISTANBUL" style="text-transform:uppercase"></div>
+          </div>
+          <div class="fr fr3" style="margin-bottom:11px">
+            <div class="fg"><label class="fl">რაოდენობა</label><input type="number" class="fi" id="j-count" value="1" min="1" max="200"></div>
+            <div class="fg"><label class="fl">რეჟიმი</label>
+              <select class="fs" id="j-mode"><option value="direct">🏗️ პირდაპირი (გემზე)</option><option value="prestage">📦 წინასწარი (ეზოში)</option></select></div>
+            <div class="fg"><label class="fl">გეითი (შესვლა)</label>
+              <select class="fs" id="j-gate"><option value="1">🚧 გეითი 1</option><option value="2">🚧 გეითი 2</option><option value="3">🚧 გეითი 3</option></select></div>
+          </div>
+          <button class="btn b-blue w" id="j-create" onclick="jCreate()">🚀 ჯგუფის შექმნა</button>
+          <button class="btn b-ghost w" style="margin-top:7px" onclick="jFromManifest()">📄 მანიფესტიდან ავტო-ჯგუფები (ტერმინალების მიხედვით)</button>
+        </div>
+      </div>
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">📋 დავალებები რიგის მიხედვით <span class="bdg s-completed" id="pl-jcount">0</span></div></div>
+        <div class="pbd" id="pl-jobs"></div>
+      </div>
+    </div>
+    <div class="col" style="width:290px;flex-shrink:0">
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">⚖️ გემის ბალანსი</div></div>
+        <div class="pbd" id="pl-balance"><div class="empty"><div class="ic">🚢</div>აირჩიეთ გემი</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: DISPATCH (shared, rendered per fleet) ═════════ -->
+<div class="view" id="v-dispatch-medlog"><div class="cols" id="dwrap-medlog"></div></div>
+<div class="view" id="v-dispatch-birzha"><div class="cols" id="dwrap-birzha"></div></div>
+
+<!-- ═════════ VIEW: TERMINAL ═════════ -->
+<div class="view" id="v-terminal">
+  <div class="cols">
+    <div class="col" style="flex:1">
+      <div class="stats stats4" style="flex-shrink:0">
+        <div class="sb"><div class="sv purple" id="tm-enroute">0</div><div class="sl">გზაშია</div></div>
+        <div class="sb"><div class="sv cyan" id="tm-here">0</div><div class="sl">ტერმინალზე</div></div>
+        <div class="sb"><div class="sv green" id="tm-loaded">0</div><div class="sl">დატვირთული</div></div>
+        <div class="sb"><div class="sv amber" id="tm-wait">0</div><div class="sl">მოლოდინში</div></div>
+      </div>
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🏭 ტერმინალის ოპერაციები</div>
+          <select class="fs" id="tm-filter" style="width:200px" onchange="tmRender()"></select></div>
+        <div class="pbd" id="tm-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: RS OPERATOR ═════════ -->
+<div class="view" id="v-rs">
+  <div class="cols">
+    <div class="col" style="flex:1">
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn b-ghost" id="rs-b7"  onclick="rsBerth('B7')">⚓ B7</button>
+        <button class="btn b-ghost" id="rs-b14" onclick="rsBerth('B14')">⚓ B14</button>
+        <div style="margin-left:auto" class="chip" id="rs-waitchip">ლოდინი ზონაში: —</div>
+      </div>
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🏗️ გადაბარების ზონა — <span id="rs-berthlbl">B7</span> <span class="bdg s-port_arrived" id="rs-count">0</span></div></div>
+        <div class="pbd" id="rs-list"></div>
+      </div>
+    </div>
+    <div class="col" style="width:300px;flex-shrink:0">
+      <div class="panel">
+        <div class="phd"><div class="ptt">⚡ სწრაფი დაცლა</div></div>
+        <div class="pbd" style="padding:13px 15px">
+          <div class="fg" style="margin-bottom:9px"><label class="fl">ავტომზიდი ან კონტეინერი</label>
+            <input class="fi" id="rs-in" placeholder="TT1 ან MSCU1234567" style="text-transform:uppercase"
+              onkeydown="if(event.key==='Enter')rsUnload()"></div>
+          <button class="btn b-red w" onclick="rsUnload()">🏗️ რიჩსტაკერით დაცლა</button>
+          <div style="font-size:10px;color:var(--t3);margin-top:9px;line-height:1.6">დაცლის შემდეგ ავტომზიდი თავისუფლდება, კონტეინერი ტელბერგით მიდის ამწესთან.</div>
+        </div>
+      </div>
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">📜 ბოლო დაცლები</div></div>
+        <div class="pbd" id="rs-act"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: DRIVER ═════════ -->
+<div class="view" id="v-driver">
+  <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-size:12px;color:var(--t2);flex-shrink:0;flex-wrap:wrap">
+    <strong id="drv-name">—</strong>
+    <span id="drv-gps" style="margin-left:auto;color:var(--t3)">🛰️ GPS გამორთულია</span>
+  </div>
+  <div style="flex:1;overflow-y:auto" id="drv-body"></div>
+</div>
+
+<!-- ═════════ VIEW: MAP ═════════ -->
+<div class="view" id="v-map">
+  <div style="background:var(--bg2);border-bottom:1px solid var(--bd);padding:7px 18px;flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px">
+    <strong style="color:var(--green)">🗺️ ცოცხალი რუკა</strong>
+    <span id="map-count" style="color:var(--blue);font-weight:700">0 ონლაინ</span>
+    <span class="zone-leg"><i style="background:rgba(37,99,235,.5)"></i>ტერმინალი</span>
+    <span class="zone-leg"><i style="background:rgba(16,24,40,.6)"></i>გეითი</span>
+    <span class="zone-leg"><i style="background:rgba(5,150,105,.5)"></i>გადაბარება</span>
+    <span class="zone-leg"><i style="background:rgba(220,38,38,.5)"></i>რკინიგზა</span>
+    <button class="btn b-ghost xs" style="margin-left:auto" onclick="mapCenterAll()">🎯 ყველა</button>
+  </div>
+  <div id="map-alerts" style="padding:0 18px;flex-shrink:0"></div>
+  <div id="mapwrap">
+    <div id="lmap"></div>
+    <div class="map-side">
+      <div style="padding:10px 13px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--t2)">მანქანები</div>
+      <div id="map-list" style="flex:1;overflow-y:auto;padding:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: ZONES EDITOR ═════════ -->
+<div class="view" id="v-zones">
+  <div style="background:var(--bg2);border-bottom:1px solid var(--bd);padding:8px 18px;flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <strong style="font-size:13px">📐 ზონების მონახაზი</strong>
+    <select class="fs" id="z-type" style="width:170px" onchange="zTypeChanged()">
+      <option value="terminal">🏭 ტერმინალი</option>
+      <option value="gate">🚧 გეითი</option>
+      <option value="transfer">🏗️ გადაბარების ზონა</option>
+      <option value="rail">🚂 რკინიგზის გადასასვლელი</option>
+    </select>
+    <select class="fs" id="z-ref" style="width:200px"></select>
+    <button class="btn b-blue sm" id="z-start" onclick="zStart()">✏️ ხაზვის დაწყება</button>
+    <button class="btn b-green sm hidden" id="z-finish" onclick="zFinish()">✓ დასრულება</button>
+    <button class="btn b-ghost sm hidden" id="z-cancel" onclick="zCancel()">× გაუქმება</button>
+    <span id="z-hint" style="font-size:11px;color:var(--t3)">აირჩიე ტიპი და დააჭირე „ხაზვის დაწყება" — შემდეგ რუკაზე დააწკაპუნე წერტილები (მინ. 3)</span>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+    <div id="zmap"></div>
+    <div class="map-side">
+      <div style="padding:10px 13px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--t2)">დახაზული ზონები</div>
+      <div id="z-list" style="flex:1;overflow-y:auto;padding:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: REGISTRY ═════════ -->
+<div class="view" id="v-registry">
+  <div class="cols">
+    <div class="col" style="flex:1">
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+        <input class="fi" id="reg-q" placeholder="🔍 გემი / მანქანა / კონტეინერი / ტერმინალი" style="width:280px" oninput="regRender()">
+        <select class="fs" id="reg-st" style="width:160px" onchange="regRender()">
+          <option value="">ყველა სტატუსი</option>
+          <option value="pending">მოლოდინი</option><option value="assigned">მიბმული</option>
+          <option value="arrived">ტერმინალზე</option><option value="loaded">დატვირთული</option>
+          <option value="port_arrived">პორტში</option><option value="completed">დასრულებული</option>
+        </select>
+        <span class="bdg s-completed" id="reg-count">0</span>
+        <button class="btn b-green sm" style="margin-left:auto" onclick="regExport()">⬇ CSV ექსპორტი</button>
+      </div>
+      <div class="panel f1"><div class="twrap"><table><tbody id="reg-tb"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: ARCHIVE ═════════ -->
+<div class="view" id="v-archive">
+  <div class="cols">
+    <div class="col" style="flex:1">
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🗄️ გასული გემები</div><span class="bdg s-completed" id="arch-count">0</span></div>
+        <div class="pbd" id="arch-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VIEW: SETTINGS ═════════ -->
+<div class="view" id="v-settings">
+  <div class="cols">
+    <div class="col" style="width:430px;flex-shrink:0">
+      <div class="panel">
+        <div class="phd"><div class="ptt">⚙️ ოპერაციული პარამეტრები</div></div>
+        <div class="pbd" style="padding:14px 16px">
+          <div class="fr fr2" style="margin-bottom:9px">
+            <div class="fg"><label class="fl">ამწის ტემპი (კონტ/სთ)</label><input type="number" class="fi" id="s-crane" min="5" max="60"></div>
+            <div class="fg"><label class="fl">რიჩსტაკერის ტემპი (კონტ/სთ)</label><input type="number" class="fi" id="s-rs" min="5" max="60"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:9px">
+            <div class="fg"><label class="fl">რიჩსტაკერი ნავმისადგომზე</label><input type="number" class="fi" id="s-rsn" min="1" max="6"></div>
+            <div class="fg"><label class="fl">საწყისი ციკლი (წთ)</label><input type="number" class="fi" id="s-cyc" min="10" max="240"></div>
+          </div>
+          <div class="fr fr3" style="margin-bottom:13px">
+            <div class="fg"><label class="fl">მედლოგის გეითი</label><select class="fs" id="s-gml"><option>1</option><option>2</option><option>3</option></select></div>
+            <div class="fg"><label class="fl">ბირჟა → B7 გეითი</label><select class="fs" id="s-gb7"><option>1</option><option>2</option><option>3</option></select></div>
+            <div class="fg"><label class="fl">ბირჟა → B14 გეითი</label><select class="fs" id="s-gb14"><option>1</option><option>2</option><option>3</option></select></div>
+          </div>
+          <button class="btn b-blue w" onclick="setSave()">💾 შენახვა</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phd"><div class="ptt">🚛 ავტომზიდის დამატება</div></div>
+        <div class="pbd" style="padding:14px 16px">
+          <div class="fr fr3" style="margin-bottom:11px">
+            <div class="fg"><label class="fl">ნომერი/ლოგინი</label><input class="fi" id="t-plate" placeholder="TT6" style="text-transform:uppercase"></div>
+            <div class="fg"><label class="fl">მძღოლი</label><input class="fi" id="t-driver" placeholder="სახელი"></div>
+            <div class="fg"><label class="fl">ფლოტი</label><select class="fs" id="t-fleet"><option value="medlog">🟠 მედლოგი</option><option value="birzha">🔵 ბირჟა</option></select></div>
+          </div>
+          <button class="btn b-green w" onclick="truckAdd()">＋ დამატება (ლოგინი: ნომერი / პაროლი: 1234)</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phd"><div class="ptt">🏭 ტერმინალის დამატება</div></div>
+        <div class="pbd" style="padding:14px 16px">
+          <div class="fr fr2" style="margin-bottom:11px">
+            <div class="fg"><label class="fl">სახელი</label><input class="fi" id="tr-name" placeholder="აღმაშენებლის ტერმინალი"></div>
+            <div class="fg"><label class="fl">კოდი</label><input class="fi" id="tr-code" placeholder="GEF11" style="text-transform:uppercase"></div>
+          </div>
+          <button class="btn b-blue w" onclick="termAdd()">＋ ტერმინალის დამატება</button>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🚛 ფლოტი</div><span id="t-count" class="bdg s-completed">0</span></div>
+        <div class="pbd" id="t-list"></div>
+      </div>
+      <div class="panel f1">
+        <div class="phd"><div class="ptt">🏭 ტერმინალები</div><span id="tr-count" class="bdg s-completed">0</span></div>
+        <div class="pbd" id="tr-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ VESSEL MODAL ═════════ -->
+<div class="overlay hidden" id="vsl-ov" onclick="if(event.target===this)vslClose()">
+  <div class="modal">
+    <div class="mttl"><span id="vsl-ttl">🚢 ახალი გემი</span><button class="mx" onclick="vslClose()">×</button></div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">გემის სახელი</label>
+      <input class="fi" id="vsl-name" placeholder="MSC ANNA" style="text-transform:uppercase"></div>
+    <div class="fr fr2" style="margin-bottom:9px">
+      <div class="fg"><label class="fl">ხაზი</label>
+        <select class="fs" id="vsl-line" onchange="vslLineChanged()">
+          <option value="MSC">MSC → 🟠 მედლოგი</option>
+          <option value="OTHER">სხვა (Maersk/COSCO/ONE…) → 🔵 ბირჟა</option>
+        </select></div>
+      <div class="fg"><label class="fl">ნავმისადგომი</label>
+        <select class="fs" id="vsl-berth"><option value="B7">B7</option><option value="B14">B14</option></select></div>
+    </div>
+    <div class="fr fr3" style="margin-bottom:9px">
+      <div class="fg"><label class="fl">ETB</label><input type="date" class="fi" id="vsl-eta"></div>
+      <div class="fg"><label class="fl">მომუშავე ამწე</label><input type="number" class="fi" id="vsl-cranes" value="2" min="1" max="4"></div>
+      <div class="fg"><label class="fl">გეგმა (კონტ.)</label><input type="number" class="fi" id="vsl-plan" value="0" min="0" max="9999"></div>
+    </div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">მანიფესტის ფაილი (Excel / CSV / TXT)</label>
+      <input type="file" class="fi" id="vsl-file" accept=".xlsx,.xls,.csv,.txt" onchange="vslFile(this)" style="padding:6px 11px">
+      <div id="vsl-filemsg" style="font-size:11px;color:var(--t3)"></div></div>
+    <div class="fg" style="margin-bottom:13px"><label class="fl">მანიფესტი — კონტეინერების ნომრები (ან ჩასვი ხელით, თითო ხაზზე ან მძიმით)</label>
+      <textarea class="fi" id="vsl-manifest" placeholder="MSCU1234567&#10;MSCU2345678&#10;..."></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn b-ghost" style="flex:1" onclick="vslClose()">გაუქმება</button>
+      <button class="btn b-blue" style="flex:2" onclick="vslSave()">💾 შენახვა</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   POTI TOS v5 — core
+   ნაკადი: pending → assigned → arrived(auto-geofence) → loaded
+           → port_arrived(auto-geofence, სწორი გეითი) → completed(RS)
+   ════════════════════════════════════════════════════════════ */
+
+// ─── Storage (localStorage + in-memory fallback) ───────────
+const _mem = {};
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('ptos5_'+k); return v ? JSON.parse(v) : d; }catch(e){ return (k in _mem) ? _mem[k] : d; } },
+  set(k, v){ try{ localStorage.setItem('ptos5_'+k, JSON.stringify(v)); }catch(e){ _mem[k] = v; } }
+};
+
+// ─── Helpers ────────────────────────────────────────────────
+const iso = () => new Date().toISOString();
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtT = t => { if(!t) return '—'; const d = new Date(t); return d.toLocaleDateString('ka-GE',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('ka-GE',{hour:'2-digit',minute:'2-digit',hour12:false}); };
+const minsBetween = (a,b) => (a && b) ? Math.round((new Date(b)-new Date(a))/60000) : null;
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+const S_LABEL = { pending:'მოლოდინი', assigned:'მიბმული', arrived:'ტერმინალზე', loaded:'დატვირთული', port_arrived:'პორტში', completed:'დასრულებული' };
+const FLEET_LBL = { medlog:'🟠 მედლოგი', birzha:'🔵 ბირჟა' };
+
+// ─── Default settings ───────────────────────────────────────
+const DEF_SET = {
+  craneRate: 25,        // 1 ამწე ≈ 25 კონტ/სთ
+  rsRate: 22,           // 1 რიჩსტაკერი ≈ 22 კონტ/სთ
+  rsPerBerth: 2,        // 2 რიჩსტაკერი ნავმისადგომზე
+  defaultCycleMin: 50,  // საწყისი ციკლი სანამ რეალური გაიზომება
+  gateMedlog: '2',      // MSC → გეითი 2
+  gateBirzhaB7: '1',    // ბირჟა B7 → გეითი 1
+  gateBirzhaB14: '3',   // ბირჟა B14 → გეითი 3
+};
+
+// ─── Seed: users + 20 ფოთის ტერმინალი ──────────────────────
+function seedUsers(){
+  const u = {};
+  u['admin']    = { pw:'1234', role:'admin' };
+  u['planner']  = { pw:'1234', role:'planner' };
+  u['medlog']   = { pw:'1234', role:'dispatch-medlog' };
+  u['birzha']   = { pw:'1234', role:'dispatch-birzha' };
+  u['terminal'] = { pw:'1234', role:'terminal' };
+  u['rs7']      = { pw:'1234', role:'rs', berth:'B7' };
+  u['rs14']     = { pw:'1234', role:'rs', berth:'B14' };
+  return u;
+}
+function seedTrucks(){
+  return [];
+}
+function seedTerminals(){
+  return [];
+}
+
+// ─── ერთჯერადი გასუფთავება: ძველი დემო/ცრუ მონაცემები წაიშალოს ──
+// (მომხმარებლები/ლოგინი რჩება. სრულდება მხოლოდ ერთხელ.)
+(function cleanReset(){
+  try{
+    if(localStorage.getItem('ptos5_clean_v1')) return;
+    ['vessels','jobs','trucks','terminals','zones','acts'].forEach(k=>localStorage.removeItem('ptos5_'+k));
+    localStorage.removeItem('ptos5_session');
+    localStorage.setItem('ptos5_clean_v1','1');
+  }catch(e){}
+})();
+
+// ─── State ──────────────────────────────────────────────────
+let SET      = Object.assign({}, DEF_SET, store.get('set', {}));
+let users    = store.get('users', null) || seedUsers();
+let terminals= store.get('terminals', null) || seedTerminals();
+let vessels  = store.get('vessels', []);
+let trucks   = store.get('trucks', null) || seedTrucks();
+let jobs     = store.get('jobs', []);
+let zones    = store.get('zones', []);
+let acts     = store.get('acts', []);   // ღონისძიებების ჟურნალი
+let alerts   = [];                       // ცოცხალი გაფრთხილებები (in-memory)
+let ME = null;
+let curView = 'planner';
+let selVessel = null;
+
+function save(){
+  store.set('set', SET); store.set('users', users); store.set('terminals', terminals);
+  store.set('vessels', vessels); store.set('trucks', trucks); store.set('jobs', jobs);
+  store.set('zones', zones); store.set('acts', acts.slice(0,300));
+}
+function logAct(type, text){ acts.unshift({ type, text, t: iso() }); if(acts.length>300) acts.length = 300; }
+
+// ─── ავტომზიდი ონლაინია? (მძღოლმა ჩართო — ლოგინი ან ცოცხალი GPS) ──
+function isOnline(t){
+  if(!t) return false;
+  const now = Date.now();
+  return t.status==='busy'
+      || (now-(t.lastSeen||0)) < 90000
+      || (t.lat!=null && (now-(t.gpsTs||0)) < 300000);
+}
+
+// ─── Gate rule: ფლოტი + ნავმისადგომი → გეითი ────────────────
+function gateFor(lineType, berth){
+  if(lineType === 'medlog') return SET.gateMedlog;
+  return berth === 'B14' ? SET.gateBirzhaB14 : SET.gateBirzhaB7;
+}
+
+// ─── Toast ──────────────────────────────────────────────────
+function toast(kind, title, msg){
+  const w = document.getElementById('toasts');
+  const d = document.createElement('div'); d.className = 'toast';
+  const ic = kind==='ok' ? ['t-ok','✓'] : kind==='err' ? ['t-err','✕'] : ['t-info','ℹ'];
+  d.innerHTML = '<div class="tico '+ic[0]+'">'+ic[1]+'</div><div><div class="ttl">'+esc(title)+'</div><div class="tms">'+esc(msg||'')+'</div></div>';
+  w.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transition='opacity .25s'; setTimeout(()=>d.remove(),260); }, 4200);
+}
+
+// ─── Auth ───────────────────────────────────────────────────
+const ROLE_TABS = {
+  'admin':            ['planner','dispatch-medlog','dispatch-birzha','terminal','rs','driver','map','zones','registry','archive','settings'],
+  'planner':          ['planner','map','zones','registry','archive'],
+  'dispatch-medlog':  ['dispatch-medlog','map','registry'],
+  'dispatch-birzha':  ['dispatch-birzha','map','registry'],
+  'terminal':         ['terminal','registry'],
+  'rs':               ['rs','registry'],
+  'driver':           ['driver'],
+};
+const ROLE_LBL = {
+  'admin':'🛡️ ადმინისტრატორი','planner':'👤 პლანერი','dispatch-medlog':'🟠 დისპეჩერი მედლოგი',
+  'dispatch-birzha':'🔵 დისპეჩერი ბირჟა','terminal':'🏭 ტერმინალი','rs':'🏗️ RS ოპერატორი','driver':'🚛 მძღოლი',
+};
+
+function doLogin(){
+  const u = document.getElementById('lu').value.trim().toLowerCase();
+  const p = document.getElementById('lp').value;
+  const err = document.getElementById('lerr');
+  let me = null;
+  if(users[u] && users[u].pw === p){
+    me = { username:u, role:users[u].role, berth:users[u].berth||null };
+  } else {
+    // მძღოლი: ლოგინი = მანქანის ნომერი
+    const t = trucks.find(x => x.plate.toLowerCase() === u);
+    if(t && p === '1234') me = { username:u, role:'driver', plate:t.plate, lineType:t.lineType };
+  }
+  if(!me){ err.classList.add('show'); document.getElementById('lp').value=''; return; }
+  err.classList.remove('show');
+  ME = me;
+  store.set('session', me);
+  enter();
+}
+function doLogout(){
+  if(ME && ME.role==='driver') stopGps();
+  ME = null; store.set('session', null);
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('lu').value=''; document.getElementById('lp').value='';
+}
+function enter(){
+  document.getElementById('login').style.display = 'none';
+  const allowed = ROLE_TABS[ME.role] || [];
+  document.querySelectorAll('.tab').forEach(t => { t.style.display = allowed.includes(t.dataset.v) ? '' : 'none'; });
+  document.getElementById('rolechip').textContent = ROLE_LBL[ME.role] + (ME.plate ? ' · '+ME.plate : ME.berth ? ' · '+ME.berth : '');
+  if(ME.role === 'driver'){
+    const t = trucks.find(x=>x.plate===ME.plate);
+    if(t) t.lastSeen = Date.now();
+    save();
+    go('driver');
+    setTimeout(startGps, 400);
+  } else if(ME.role === 'rs'){
+    rsCurBerth = ME.berth || 'B7';
+    go('rs');
+  } else {
+    const def = allowed[0];
+    go(def);
+  }
+}
+function tryResume(){
+  const s = store.get('session', null);
+  if(!s) return;
+  if(s.role === 'driver'){
+    const t = trucks.find(x=>x.plate===s.plate);
+    if(!t) return;
+  } else if(!users[s.username]) return;
+  ME = s; enter();
+}
+
+// ─── Navigation ─────────────────────────────────────────────
+function go(v){
+  curView = v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  const el = document.getElementById('v-'+(v.startsWith('dispatch') ? v : v));
+  if(el) el.classList.add('on');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.v===v));
+  render();
+}
+function render(){
+  if(curView==='planner') plRender();
+  else if(curView==='dispatch-medlog') dRender('medlog');
+  else if(curView==='dispatch-birzha') dRender('birzha');
+  else if(curView==='terminal') tmRender();
+  else if(curView==='rs') rsRender();
+  else if(curView==='driver') drvRender();
+  else if(curView==='map') mapShow();
+  else if(curView==='zones') zShow();
+  else if(curView==='registry') regRender();
+  else if(curView==='archive') archRender();
+  else if(curView==='settings') setRender();
+}
+
+// ─── Clock ──────────────────────────────────────────────────
+setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ka-GE',{hour12:false}); }, 1000);
+
+/* ════════════════════════════════════════════════════════════
+   PLANNER — გემები, დავალებების ჯგუფები, ბალანსი
+   ════════════════════════════════════════════════════════════ */
+let editVesselId = null;
+
+function vslOpen(id){
+  editVesselId = id || null;
+  document.getElementById('vsl-ttl').textContent = id ? '✏️ გემის რედაქტირება' : '🚢 ახალი გემი';
+  const v = id ? vessels.find(x=>x.id===id) : null;
+  document.getElementById('vsl-name').value = v ? v.name : '';
+  document.getElementById('vsl-line').value = v ? v.line : 'MSC';
+  document.getElementById('vsl-berth').value = v ? v.berth : 'B7';
+  document.getElementById('vsl-eta').value = v ? (v.eta||'') : '';
+  document.getElementById('vsl-cranes').value = v ? (v.cranes||2) : 2;
+  document.getElementById('vsl-plan').value = v ? (v.plan||0) : 0;
+  document.getElementById('vsl-manifest').value = v ? mf(v).map(e=>e.c+(e.t?'\t'+e.t:'')).join('\n') : '';
+  document.getElementById('vsl-filemsg').innerHTML = '';
+  document.getElementById('vsl-ov').classList.remove('hidden');
+}
+function vslClose(){ document.getElementById('vsl-ov').classList.add('hidden'); editVesselId = null; }
+function vslLineChanged(){}
+
+// მანიფესტი: ჩანაწერი = { c: კონტეინერი, t: ტერმინალი|null }
+function mf(v){ return (v && v.manifest ? v.manifest : []).map(x => typeof x==='string' ? {c:x, t:null} : x); }
+function matchTerminal(s){
+  s = String(s||'').trim();
+  if(!s) return null;
+  const up = s.toUpperCase();
+  let t = terminals.find(x=>x.name===s) || terminals.find(x=>x.code && x.code!=='—' && up===x.code);
+  if(t) return t.name;
+  t = terminals.find(x=>s.includes(x.name)) || terminals.find(x=>x.code && x.code!=='—' && up.includes(x.code));
+  return t ? t.name : null;
+}
+function extractContainers(text){
+  const found = String(text||'').toUpperCase().match(/[A-Z]{4}\s?\d{7}/g) || [];
+  return [...new Set(found.map(s=>s.replace(/\s/g,'')))];
+}
+// სტრიქონ-სტრიქონ: ნომერი + იმავე ხაზზე ტერმინალი
+function parseManifestText(text){
+  const out = [], seen = new Set();
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const m = line.toUpperCase().match(/[A-Z]{4}\s?\d{7}/);
+    if(!m) return;
+    const c = m[0].replace(/\s/g,'');
+    if(seen.has(c)) return;
+    seen.add(c);
+    out.push({ c, t: matchTerminal(line.replace(new RegExp(m[0],'i'),'')) });
+  });
+  return out;
+}
+function manifestSummary(list){
+  const withT = list.filter(e=>e.t);
+  const byT = {};
+  withT.forEach(e=>byT[e.t]=(byT[e.t]||0)+1);
+  return { total:list.length, terms:Object.keys(byT).length, noT:list.length-withT.length, byT };
+}
+function vslFile(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const msg = document.getElementById('vsl-filemsg');
+  const done = list => {
+    if(!list.length){ msg.innerHTML = '<span style="color:var(--red)">ფაილში კონტეინერის ნომერი ვერ მოიძებნა (4 ასო + 7 ციფრი)</span>'; return; }
+    document.getElementById('vsl-manifest').value = list.map(e=>e.c+(e.t?'\t'+e.t:'')).join('\n');
+    const s = manifestSummary(list);
+    msg.innerHTML = '<span style="color:var(--green)">✓ '+s.total+' კონტეინერი · '+s.terms+' ტერმინალზე გადანაწილებული'
+      +(s.noT?' · <span style="color:var(--amber)">'+s.noT+' ტერმინალის გარეშე</span>':'')+'</span>';
+    toast('ok','მანიფესტი', s.total+' კონტ. · '+s.terms+' ტერმინალი');
+  };
+  const isXls = /\.(xlsx|xls)$/i.test(f.name);
+  if(isXls){
+    if(!window.XLSX){ msg.innerHTML = '<span style="color:var(--red)">Excel-ბიბლიოთეკა ვერ ჩაიტვირთა (ინტერნეტი?) — ჩასვი ნომრები ხელით</span>'; return; }
+    const r = new FileReader();
+    r.onload = e => {
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+        const out = [], seen = new Set();
+        wb.SheetNames.forEach(n=>{
+          XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, raw:false }).forEach(row=>{
+            if(!Array.isArray(row)) return;
+            let c=null, t=null;
+            row.forEach(cell=>{
+              const s = String(cell??'');
+              if(!c){ const m = s.toUpperCase().match(/[A-Z]{4}\s?\d{7}/); if(m){ c = m[0].replace(/\s/g,''); return; } }
+              if(!t) t = matchTerminal(s);
+            });
+            if(c && !seen.has(c)){ seen.add(c); out.push({c,t}); }
+          });
+        });
+        done(out);
+      }catch(err){ msg.innerHTML = '<span style="color:var(--red)">ფაილი ვერ წაიკითხა: '+esc(err.message)+'</span>'; }
+    };
+    r.readAsArrayBuffer(f);
+  } else {
+    const r = new FileReader();
+    r.onload = e => done(parseManifestText(e.target.result));
+    r.readAsText(f);
+  }
+  input.value = '';
+}
+
+function vslSave(){
+  const name  = document.getElementById('vsl-name').value.trim().toUpperCase();
+  if(!name){ toast('err','შეცდომა','შეიყვანე გემის სახელი'); return; }
+  const line  = document.getElementById('vsl-line').value;
+  const berth = document.getElementById('vsl-berth').value;
+  const eta   = document.getElementById('vsl-eta').value;
+  const cranes= Math.max(1, parseInt(document.getElementById('vsl-cranes').value)||2);
+  const plan  = Math.max(0, parseInt(document.getElementById('vsl-plan').value)||0);
+  const manifest = parseManifestText(document.getElementById('vsl-manifest').value);
+  const lineType = line === 'MSC' ? 'medlog' : 'birzha';
+
+  // ვალიდაცია: ერთ ნავმისადგომზე ერთდროულად ერთი აქტიური/მომავალი გემი
+  const clash = vessels.find(v => v.berth===berth && v.status!=='departed' && v.id!==editVesselId);
+  if(clash){ toast('err','ნავმისადგომი დაკავებულია', berth+'-ზე უკვე დგას: '+clash.name); return; }
+
+  if(editVesselId){
+    const v = vessels.find(x=>x.id===editVesselId);
+    if(!v) return;
+    Object.assign(v, { name, line, lineType, berth, eta, cranes, plan, manifest });
+    // არსებული დავალებების გეითი/ფლოტი განახლდეს გემის ცვლილებაზე
+    jobs.forEach(j => { if(j.vesselId===v.id && j.status==='pending'){ j.lineType=lineType; j.berth=berth; j.gate=gateFor(lineType,berth); } });
+    toast('ok','განახლდა', name);
+  } else {
+    if(vessels.some(v=>v.name===name && v.status!=='departed')){ toast('err','შეცდომა','ამ სახელით გემი უკვე არსებობს'); return; }
+    vessels.push({ id:uid('v'), name, line, lineType, berth, eta, cranes, plan, manifest, status:'active', createdAt:iso(), departedAt:null });
+    logAct('vessel', '🚢 '+name+' → '+berth+' ('+FLEET_LBL[lineType]+')');
+    toast('ok','დაემატა', name+' → '+berth);
+  }
+  save(); vslClose(); plRender();
+}
+
+function vslDepart(id){
+  const v = vessels.find(x=>x.id===id); if(!v) return;
+  const open = jobs.filter(j=>j.vesselId===id && j.status!=='completed');
+  if(open.length){ toast('err','ვერ გავა', open.length+' დავალება ჯერ მიმდინარეობს'); return; }
+  if(!confirm('„'+v.name+'" გავიდეს? ანგარიში (CSV) ჩამოიწერება.')) return;
+  v.status = 'departed'; v.departedAt = iso();
+  exportVesselReport(v);
+  save(); plRender();
+  toast('ok','გავიდა', v.name);
+}
+function vslDelete(id){
+  const v = vessels.find(x=>x.id===id); if(!v) return;
+  if(jobs.some(j=>j.vesselId===id && j.status!=='completed')){ toast('err','ვერ წაიშლება','აქტიური დავალებები აქვს'); return; }
+  if(!confirm('წავშალო „'+v.name+'" და მისი ყველა დავალება?')) return;
+  vessels = vessels.filter(x=>x.id!==id);
+  jobs = jobs.filter(j=>j.vesselId!==id);
+  if(selVessel===id) selVessel=null;
+  save(); plRender();
+}
+
+function jVesselPick(){
+  const id = document.getElementById('j-vessel').value;
+  const v = vessels.find(x=>x.id===id);
+  // შემოთავაზებული გეითი წინასწარ აირჩევა, მაგრამ ხელით შეცვლა შესაძლებელია
+  if(v) document.getElementById('j-gate').value = gateFor(v.lineType, v.berth);
+  selVessel = id || null;
+  plRenderBalance();
+}
+
+function jCreate(){
+  const vid = document.getElementById('j-vessel').value;
+  const v = vessels.find(x=>x.id===vid);
+  if(!v){ toast('err','შეცდომა','აირჩიე გემი'); return; }
+  if(v.status!=='active'){ toast('err','შეცდომა','გემი აქტიური არ არის'); return; }
+  const terminal = document.getElementById('j-terminal').value;
+  if(!terminal){ toast('err','შეცდომა','აირჩიე ტერმინალი'); return; }
+  const pod = document.getElementById('j-pod').value.trim().toUpperCase();
+  if(!pod){ toast('err','შეცდომა','შეიყვანე დაცლის პორტი (POD)'); return; }
+  const seq   = Math.max(1, parseInt(document.getElementById('j-seq').value)||1);
+  const type  = document.getElementById('j-type').value;
+  const prio  = document.getElementById('j-prio').value;
+  const count = Math.min(200, Math.max(1, parseInt(document.getElementById('j-count').value)||1));
+  const mode  = document.getElementById('j-mode').value;
+  const gate  = document.getElementById('j-gate').value;
+  for(let i=0;i<count;i++){
+    jobs.push({ id:uid('j'), vesselId:v.id, vesselName:v.name, terminal,
+      lineType:v.lineType, berth:v.berth, gate, type, priority:prio, pod, seq, mode,
+      status:'pending', truck:'', container:'', createdAt:iso(),
+      assignedAt:null, arrivedAt:null, loadedAt:null, portArrivedAt:null, completedAt:null });
+  }
+  logAct('job', '➕ '+v.name+': '+count+'×'+type+' → '+terminal+' (რიგი '+seq+')');
+  save(); plRender();
+  toast('ok','შეიქმნა', count+' დავალება → '+terminal+' · რიგი '+seq+' · გეითი '+gate);
+}
+
+// მანიფესტი → ავტომატური ჯგუფები: თითო ტერმინალზე ზუსტად იმდენი დავალება, რამდენი კონტეინერიცაა მოთხოვნილი
+function jFromManifest(){
+  const vid = document.getElementById('j-vessel').value;
+  const v = vessels.find(x=>x.id===vid);
+  if(!v){ toast('err','შეცდომა','აირჩიე გემი'); return; }
+  const m = mf(v);
+  if(!m.length){ toast('err','შეცდომა','ამ გემს მანიფესტი არ აქვს — ატვირთე ფაილი გემის რედაქტირებაში'); return; }
+  const withT = m.filter(e=>e.t), noT = m.length - withT.length;
+  if(!withT.length){ toast('err','შეცდომა','მანიფესტში ტერმინალები ვერ ამოიკითხა — ფაილში ტერმინალის სვეტი უნდა იყოს'); return; }
+  const byT = {};
+  withT.forEach(e=>byT[e.t]=(byT[e.t]||0)+1);
+  const type = document.getElementById('j-type').value;
+  const prio = document.getElementById('j-prio').value;
+  const pod  = document.getElementById('j-pod').value.trim().toUpperCase() || 'TBA';
+  const mode = document.getElementById('j-mode').value;
+  const gate = document.getElementById('j-gate').value;
+  let seq = jobs.filter(j=>j.vesselId===v.id).reduce((mx,j)=>Math.max(mx,j.seq||0), 0);
+  let made = 0, groups = 0;
+  Object.entries(byT).forEach(([term,cnt])=>{
+    const existing = jobs.filter(j=>j.vesselId===v.id && j.terminal===term).length;
+    const need = cnt - existing;
+    if(need <= 0) return;
+    seq++; groups++;
+    for(let i=0;i<need;i++){
+      jobs.push({ id:uid('j'), vesselId:v.id, vesselName:v.name, terminal:term,
+        lineType:v.lineType, berth:v.berth, gate, type, priority:prio, pod, seq, mode,
+        status:'pending', truck:'', container:'', createdAt:iso(),
+        assignedAt:null, arrivedAt:null, loadedAt:null, portArrivedAt:null, completedAt:null });
+      made++;
+    }
+  });
+  if(!made){ toast('info','ყველაფერი დაგეგმილია','მანიფესტის ყველა კონტეინერს უკვე აქვს დავალება'); return; }
+  logAct('job','📄 '+v.name+': მანიფესტიდან '+made+' დავალება, '+groups+' ტერმინალი');
+  save(); plRender();
+  toast('ok','შეიქმნა მანიფესტიდან', made+' დავალება · '+groups+' ჯგუფი'+(noT?' · '+noT+' კონტ. ტერმინალის გარეშე გამოტოვდა':''));
+}
+
+function jGroupDelete(idsJson){
+  let ids; try{ ids = JSON.parse(idsJson); }catch(e){ return; }
+  const del = jobs.filter(j=>ids.includes(j.id) && j.status==='pending');
+  if(!del.length){ toast('err','ვერ წაიშლება','მხოლოდ მოლოდინში მყოფი ჯგუფი იშლება'); return; }
+  if(!confirm(del.length+' დავალება წაიშალოს?')) return;
+  jobs = jobs.filter(j=>!ids.includes(j.id) || j.status!=='pending');
+  save(); plRender();
+  toast('info','წაიშალა', del.length+' დავალება');
+}
+
+function plRender(){
+  // გემების სია
+  const vEl = document.getElementById('pl-vessels');
+  const act = vessels.filter(v=>v.status!=='departed');
+  vEl.innerHTML = act.length ? act.map(v=>{
+    const done = jobs.filter(j=>j.vesselId===v.id && j.status==='completed').length;
+    const total = jobs.filter(j=>j.vesselId===v.id).length;
+    const fc = berthForecast(v);
+    return '<div class="row-item '+(selVessel===v.id?'sel':'')+'" style="flex-direction:column;align-items:stretch;cursor:pointer" onclick="plPick(\''+v.id+'\')">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<strong style="font-size:14px">'+esc(v.name)+'</strong>'
+      +'<span class="pill p-'+v.lineType+'">'+(v.lineType==='medlog'?'MSC':'სხვა')+'</span>'
+      +'<span style="margin-left:auto;color:var(--red);font-weight:800">'+esc(v.berth)+'</span></div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:4px">ETB '+esc(v.eta||'—')+' · '+v.cranes+' ამწე · გეგმა '+v.plan+' · '+done+'/'+total+' შესრ.</div>'
+      +(fc.deficit ? '<div style="font-size:11px;color:var(--red);font-weight:700;margin-top:3px">⚠️ ფლოტის დეფიციტი: მაქს. ~'+fc.fleetRate+'/სთ (ამწეებს სჭირდება '+fc.sink+'/სთ)</div>' : '')
+      +'<div style="display:flex;gap:5px;margin-top:7px">'
+      +'<button class="btn b-ghost xs" onclick="event.stopPropagation();vslOpen(\''+v.id+'\')">✏️</button>'
+      +'<button class="btn b-amber xs" onclick="event.stopPropagation();vslDepart(\''+v.id+'\')">⛴ გასვლა</button>'
+      +'<button class="btn b-red xs" onclick="event.stopPropagation();vslDelete(\''+v.id+'\')">🗑</button>'
+      +'</div></div>';
+  }).join('') : '<div class="empty"><div class="ic">🚢</div>გემი არ არის — დაამატე ზემოდან</div>';
+
+  // dropdown-ები
+  const vs = document.getElementById('j-vessel');
+  vs.innerHTML = '<option value="">— გემი —</option>' + act.filter(v=>v.status==='active').map(v=>'<option value="'+v.id+'" '+(selVessel===v.id?'selected':'')+'>'+esc(v.name)+' ('+v.berth+')</option>').join('');
+  const ts = document.getElementById('j-terminal');
+  if(ts.dataset.tv !== String(termVer)){
+    ts.innerHTML = '<option value="">— ტერმინალი —</option>' + terminals.map(t=>'<option value="'+esc(t.name)+'">'+esc(t.name)+' — '+esc(t.code)+'</option>').join('');
+    ts.dataset.tv = String(termVer);
+  }
+  jVesselPick();
+  plRenderJobs();
+  plRenderBalance();
+}
+function plPick(id){ selVessel = (selVessel===id) ? null : id; document.getElementById('j-vessel').value = selVessel||''; plRender(); }
+
+function plRenderJobs(){
+  const open = jobs.filter(j=>j.status!=='completed');
+  document.getElementById('pl-jcount').textContent = open.length;
+  if(!open.length){ document.getElementById('pl-jobs').innerHTML = '<div class="empty"><div class="ic">📭</div>დავალება არ არის</div>'; return; }
+  // ჯგუფი: vessel+seq+terminal+type+prio+pod+mode
+  const g = new Map();
+  open.forEach(j=>{
+    const k = [j.vesselId,j.seq,j.terminal,j.type,j.priority,j.pod,j.mode].join('|');
+    if(!g.has(k)) g.set(k, { ...j, jobs:[] });
+    g.get(k).jobs.push(j);
+  });
+  const groups = [...g.values()].sort((a,b)=> (a.vesselName.localeCompare(b.vesselName)) || (a.seq-b.seq));
+  document.getElementById('pl-jobs').innerHTML = groups.map(gr=>{
+    const st = {}; gr.jobs.forEach(j=>st[j.status]=(st[j.status]||0)+1);
+    const badges = Object.entries(st).map(([s,n])=>'<span class="bdg s-'+s+'">'+S_LABEL[s]+' '+n+'</span>').join(' ');
+    const ids = JSON.stringify(gr.jobs.map(j=>j.id));
+    return '<div class="row-item" style="gap:12px">'
+      +'<span class="seq-num">'+gr.seq+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +'<span class="chip-sm" style="color:var(--blue)">🚢 '+esc(gr.vesselName)+'</span>'
+      +'<span class="chip-sm">🏭 '+esc(gr.terminal)+'</span>'
+      +'<span class="chip-sm">📦 '+esc(gr.type)+'</span>'
+      +'<span class="chip-sm">'+(gr.priority==='empty'?'⬜ ცარ.':'🟫 სავსე')+'</span>'
+      +'<span class="chip-sm" style="color:var(--cyan)">⚓ '+esc(gr.pod)+'</span>'
+      +'<span class="gate-badge">გეითი '+esc(gr.gate)+'</span>'
+      +'<span class="chip-sm">'+(gr.mode==='prestage'?'📦 წინასწარი':'🏗️ პირდაპირი')+'</span>'
+      +'</div><div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">'+badges+'</div></div>'
+      +'<strong style="font-size:21px;color:var(--t1)">'+gr.jobs.length+'</strong>'
+      +'<button class="btn b-red xs" onclick=\'jGroupDelete('+JSON.stringify(ids)+')\'>🗑</button>'
+      +'</div>';
+  }).join('');
+}
+
+// გემის ბალანსი: გეგმა / პორტშია(წინასწარი) / გემზეა / მოსატანი + დეფიციტის პროგნოზი
+function vesselBalance(v){
+  const vj = jobs.filter(j=>j.vesselId===v.id);
+  const prestaged = vj.filter(j=>j.mode==='prestage' && j.status==='completed').length;
+  const direct    = vj.filter(j=>j.mode==='direct'   && j.status==='completed').length;
+  const inMotion  = vj.filter(j=>!['pending','completed'].includes(j.status)).length;
+  const pending   = vj.filter(j=>j.status==='pending').length;
+  const brought   = prestaged + direct;
+  const toBring   = Math.max(0, (v.plan||0) - brought - inMotion - pending);
+  return { prestaged, direct, inMotion, pending, brought, toBring };
+}
+// ფლოტის დეფიციტის პროგნოზი ნავმისადგომზე
+function berthForecast(v){
+  const sink = Math.min((v.cranes||2)*SET.craneRate, SET.rsPerBerth*SET.rsRate);
+  const fleetSize = trucks.filter(t=>t.lineType===v.lineType).length;
+  const cyc = measuredCycle(v.berth) || SET.defaultCycleMin;
+  const fleetRate = cyc>0 ? Math.round(fleetSize*60/cyc) : 0;
+  return { sink, fleetSize, cyc, fleetRate, deficit: fleetRate < sink && (v.plan||0) > 0 };
+}
+
+function plRenderBalance(){
+  const el = document.getElementById('pl-balance');
+  const v = vessels.find(x=>x.id===selVessel && x.status!=='departed');
+  if(!v){ el.innerHTML = '<div class="empty"><div class="ic">🚢</div>აირჩიეთ გემი</div>'; return; }
+  const b = vesselBalance(v);
+  const fc = berthForecast(v);
+  const pct = v.plan>0 ? Math.min(100, Math.round(b.brought/v.plan*100)) : 0;
+  const hrsLeft = fc.sink>0 ? (b.toBring + b.pending + b.inMotion)/Math.min(fc.sink, fc.fleetRate||fc.sink) : 0;
+  el.innerHTML =
+    '<div style="font-size:15px;font-weight:800;margin-bottom:2px">'+esc(v.name)+'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:11px">'+esc(v.berth)+' · '+v.cranes+' ამწე · '+FLEET_LBL[v.lineType]+' · გეითი '+gateFor(v.lineType,v.berth)+'</div>'
+    +'<div class="stats stats2" style="margin-bottom:10px">'
+    +'<div class="sb"><div class="sv">'+(v.plan||0)+'</div><div class="sl">გეგმა</div></div>'
+    +'<div class="sb"><div class="sv green">'+b.brought+'</div><div class="sl">მოტანილია</div></div>'
+    +'<div class="sb"><div class="sv blue">'+b.prestaged+'</div><div class="sl">📦 ეზოშია</div></div>'
+    +'<div class="sb"><div class="sv purple">'+b.inMotion+'</div><div class="sl">მოძრაობს</div></div>'
+    +'<div class="sb"><div class="sv amber">'+b.pending+'</div><div class="sl">მოლოდინში</div></div>'
+    +'<div class="sb"><div class="sv '+(b.toBring>0?'red':'green')+'">'+b.toBring+'</div><div class="sl">დასაგეგმი</div></div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--t2);margin-bottom:4px;display:flex;justify-content:space-between"><span>პროგრესი</span><span>'+pct+'%</span></div>'
+    +'<div class="meter"><div style="width:'+pct+'%;background:var(--green)"></div></div>'
+    +'<div class="hr" style="margin:13px 0"></div>'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:7px">📈 ტემპის პროგნოზი</div>'
+    +'<div style="font-size:12px;color:var(--t2);line-height:1.9">'
+    +'ამწე/რიჩსტ. მოთხოვნა: <b>'+fc.sink+'/სთ</b><br>'
+    +'ფლოტი ('+fc.fleetSize+' მანქ., ციკლი ~'+fc.cyc+'წთ): <b>~'+fc.fleetRate+'/სთ</b><br>'
+    +(fc.deficit
+      ? '<span style="color:var(--red);font-weight:700">⚠️ ფლოტი ვერ აუვა ამწეებს — ამწეები უქმად იდგებიან.</span><br>'
+      : '<span style="color:var(--green);font-weight:700">✓ ფლოტი საკმარისია მოთხოვნისთვის.</span><br>')
+    +'სავარაუდო დასრულება: <b>~'+(hrsLeft>0?hrsLeft.toFixed(1):'0')+' სთ</b></div>';
+}
+
+/* ════════════════════════════════════════════════════════════
+   DISPATCH — რეგულატორი + რიგით მიბმა
+   ════════════════════════════════════════════════════════════ */
+const dSel = { medlog:{jobs:new Set(), trucks:new Set()}, birzha:{jobs:new Set(), trucks:new Set()} };
+
+// გაზომილი ციკლის ნაწილი (assigned → port_arrived) ნავმისადგომზე
+function measuredCycle(berth){
+  const done = jobs.filter(j=>j.berth===berth && j.assignedAt && j.portArrivedAt)
+    .sort((a,b)=>new Date(b.portArrivedAt)-new Date(a.portArrivedAt)).slice(0,15);
+  if(done.length < 3) return null;
+  const avg = done.reduce((s,j)=>s+minsBetween(j.assignedAt,j.portArrivedAt),0)/done.length;
+  return Math.round(avg);
+}
+// გადაბარების ზონის ლოდინი (port_arrived → completed)
+function transferWait(berth){
+  const done = jobs.filter(j=>j.berth===berth && j.portArrivedAt && j.completedAt)
+    .sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt)).slice(0,10);
+  if(!done.length) return null;
+  return Math.round(done.reduce((s,j)=>s+minsBetween(j.portArrivedAt,j.completedAt),0)/done.length);
+}
+
+function berthRegulator(berth, lineType){
+  const v = vessels.find(x=>x.status==='active' && x.berth===berth && x.lineType===lineType);
+  if(!v) return null;
+  const sink = Math.min((v.cranes||2)*SET.craneRate, SET.rsPerBerth*SET.rsRate);
+  const cyc  = measuredCycle(berth) || SET.defaultCycleMin;
+  const target = Math.max(1, Math.round(sink*cyc/60));
+  const vj = jobs.filter(j=>j.vesselId===v.id);
+  const inTransit = vj.filter(j=>['assigned','arrived','loaded'].includes(j.status)).length;
+  const atZone    = vj.filter(j=>j.status==='port_arrived').length;
+  const pending   = vj.filter(j=>j.status==='pending').length;
+  const wait = transferWait(berth);
+  const diff = target - inTransit;
+  return { v, berth, sink, cyc, target, inTransit, atZone, pending, wait, diff };
+}
+
+function dRender(lt){
+  const wrap = document.getElementById('dwrap-'+lt);
+  const sel = dSel[lt];
+  const myJobs = jobs.filter(j=>j.lineType===lt);
+  const pending = myJobs.filter(j=>j.status==='pending').sort((a,b)=>(a.seq-b.seq)||a.createdAt.localeCompare(b.createdAt));
+  const myTrucks = trucks.filter(t=>t.lineType===lt && isOnline(t));
+  const free = myTrucks.filter(t=>t.status==='free');
+  const col = lt==='medlog' ? 'var(--medlog)' : 'var(--birzha)';
+
+  // რეგულატორის ბარათები (B7 + B14, ამ ფლოტის გემებზე)
+  let regs = '';
+  ['B7','B14'].forEach(b=>{
+    const r = berthRegulator(b, lt);
+    if(!r) return;
+    let action, cls;
+    if(r.wait != null && r.wait > 12){ action = '🔴 შეანელე — ზონაში ლოდინი ~'+r.wait+' წთ'; cls='reg-hold'; }
+    else if(r.diff >= 3 && r.pending > 0){ action = '🟢 გაუშვი '+Math.min(r.diff, r.pending, free.length)+' მანქანა ახლავე'; cls='reg-go'; }
+    else if(r.diff <= -3){ action = '🔴 ზედმეტია გზაში — შეაჩერე გაშვება'; cls='reg-hold'; }
+    else { action = '🔵 ბალანსი ნორმაშია'; cls='reg-ok'; }
+    const pct = Math.min(100, Math.round(r.inTransit/r.target*100));
+    regs += '<div class="reg-card">'
+      +'<div class="reg-hd"><span class="reg-berth">⚓ '+b+' · '+esc(r.v.name)+'</span>'
+      +'<span style="font-size:11px;color:var(--t3)">'+r.v.cranes+' ამწე · '+SET.rsPerBerth+' RS → '+r.sink+'/სთ</span></div>'
+      +'<div class="reg-row"><span><span class="reg-big">'+r.inTransit+'</span> / '+r.target+' გზაშია</span>'
+      +'<span>ციკლი ~<b>'+r.cyc+'</b> წთ</span><span>ზონაში: <b>'+r.atZone+'</b></span>'
+      +(r.wait!=null?'<span>ლოდინი: <b>'+r.wait+'</b> წთ</span>':'')
+      +'<span>მოლოდინში: <b>'+r.pending+'</b></span></div>'
+      +'<div class="meter"><div style="width:'+pct+'%;background:'+(pct>120?'var(--red)':col)+'"></div></div>'
+      +'<div class="reg-action '+cls+'">'+action+'</div></div>';
+  });
+  if(!regs) regs = '<div class="empty" style="padding:18px"><div class="ic">⚓</div>'+FLEET_LBL[lt]+'-ის აქტიური გემი არ დგას</div>';
+
+  // pending ჯგუფები რიგით
+  const g = new Map();
+  pending.forEach(j=>{
+    const k = [j.vesselId,j.seq,j.terminal,j.type,j.priority,j.pod,j.mode].join('|');
+    if(!g.has(k)) g.set(k, { ...j, jobs:[] });
+    g.get(k).jobs.push(j);
+  });
+  const groups = [...g.values()].sort((a,b)=>a.seq-b.seq);
+  const jobsHtml = groups.length ? groups.map(gr=>{
+    const ids = gr.jobs.map(j=>j.id);
+    const nSel = ids.filter(id=>sel.jobs.has(id)).length;
+    const all = nSel===ids.length;
+    return '<div class="row-item '+(nSel?'sel':'')+'" style="cursor:pointer;gap:11px" onclick=\'dToggleGroup("'+lt+'",'+JSON.stringify(ids)+')\'>'
+      +'<input type="checkbox" '+(all?'checked':'')+' style="width:15px;height:15px;pointer-events:none">'
+      +'<span class="seq-num">'+gr.seq+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +'<span class="chip-sm" style="color:var(--blue)">🚢 '+esc(gr.vesselName)+'</span>'
+      +'<span class="chip-sm">🏭 '+esc(gr.terminal)+'</span>'
+      +'<span class="chip-sm">📦 '+esc(gr.type)+' '+(gr.priority==='empty'?'⬜':'🟫')+'</span>'
+      +'<span class="chip-sm" style="color:var(--cyan)">⚓ '+esc(gr.pod)+'</span>'
+      +'<span class="gate-badge">გ'+esc(gr.gate)+'</span>'
+      +(gr.mode==='prestage'?'<span class="chip-sm">📦 წინასწ.</span>':'')
+      +'</div></div>'
+      +'<strong style="font-size:19px">'+(nSel?nSel+'/':'')+ids.length+'</strong></div>';
+  }).join('') : '<div class="empty"><div class="ic">✅</div>მოლოდინში დავალება არ არის</div>';
+
+  // ავტომზიდები — თავისუფლები მონიშვნადი, დაკავებულები ჩანს
+  const trucksHtml = myTrucks.length ? myTrucks.map(t=>{
+    const busy = t.status!=='free';
+    const on = sel.trucks.has(t.plate);
+    return '<div class="row-item '+(on?'sel':'')+'" style="cursor:'+(busy?'default':'pointer')+';opacity:'+(busy?'.5':'1')+'" '
+      +(busy?'':'onclick="dToggleTruck(\''+lt+'\',\''+t.plate+'\')"')+'>'
+      +(busy?'':'<input type="checkbox" '+(on?'checked':'')+' style="width:15px;height:15px;pointer-events:none">')
+      +'<div style="flex:1"><div class="mono" style="font-size:13px">'+esc(t.plate)+'</div>'
+      +'<div style="font-size:11px;color:var(--t3)">'+esc(t.driver)+'</div></div>'
+      +'<span style="font-size:11px;font-weight:700;color:'+(busy?'var(--amber)':'var(--green)')+'">'+(busy?'⏳ დაკავ.':'✓ თავის.')+'</span></div>';
+  }).join('') : '<div class="empty"><div class="ic">🚛</div>ჩართული ავტომზიდი არ არის — მძღოლმა უნდა შევიდეს სისტემაში</div>';
+
+  const stats = {
+    pend: pending.length,
+    asg: myJobs.filter(j=>j.status==='assigned').length,
+    arr: myJobs.filter(j=>j.status==='arrived').length,
+    ld:  myJobs.filter(j=>['loaded','port_arrived'].includes(j.status)).length,
+  };
+
+  wrap.innerHTML =
+    '<div class="col" style="flex:1">'
+    +'<div class="stats stats4" style="flex-shrink:0">'
+    +'<div class="sb"><div class="sv amber">'+stats.pend+'</div><div class="sl">მოლოდინი</div></div>'
+    +'<div class="sb"><div class="sv purple">'+stats.asg+'</div><div class="sl">მიბმული</div></div>'
+    +'<div class="sb"><div class="sv cyan">'+stats.arr+'</div><div class="sl">ტერმინალზე</div></div>'
+    +'<div class="sb"><div class="sv green">'+stats.ld+'</div><div class="sl">დატვ./პორტში</div></div></div>'
+    +'<div class="panel" style="flex-shrink:0"><div class="phd"><div class="ptt" style="color:'+col+'">📡 ნავმისადგომის რეგულატორი</div></div>'
+    +'<div class="pbd" style="max-height:260px">'+regs+'</div></div>'
+    +'<div class="panel f1"><div class="phd"><div class="ptt" style="color:'+col+'">📋 დავალებები ბეი-რიგით</div></div>'
+    +'<div class="pbd">'+jobsHtml+'</div></div></div>'
+    +'<div class="col" style="width:310px;flex-shrink:0">'
+    +'<div class="panel f1"><div class="phd"><div class="ptt">🚛 ავტომზიდები</div>'
+    +'<span class="bdg s-loaded">'+free.length+' თავის.</span></div>'
+    +'<div class="pbd">'+trucksHtml+'</div></div>'
+    +'<div class="panel" style="flex-shrink:0"><div class="pbd" style="padding:13px">'
+    +'<button class="btn b-'+lt+' w" style="margin-bottom:7px" onclick="dAssign(\''+lt+'\')">🔗 მონიშნულის მიბმა</button>'
+    +'<button class="btn b-ghost w" onclick="dAutoAssign(\''+lt+'\')">⚡ ავტო-მიბმა (რიგით + უახლოესი)</button>'
+    +'</div></div></div>';
+}
+
+function dToggleGroup(lt, ids){
+  const s = dSel[lt].jobs;
+  const all = ids.every(id=>s.has(id));
+  ids.forEach(id=> all ? s.delete(id) : s.add(id));
+  dRender(lt);
+}
+function dToggleTruck(lt, plate){
+  const s = dSel[lt].trucks;
+  if(s.has(plate)) s.delete(plate); else s.add(plate);
+  dRender(lt);
+}
+
+function assignPair(job, truck){
+  job.status='assigned'; job.truck=truck.plate; job.assignedAt=iso();
+  truck.status='busy'; truck.jobId=job.id;
+  logAct('assign','🔗 '+truck.plate+' → '+job.vesselName+' / '+job.terminal+' (რიგი '+job.seq+')');
+}
+
+function dAssign(lt){
+  const s = dSel[lt];
+  const jl = [...s.jobs].map(id=>jobs.find(j=>j.id===id && j.status==='pending')).filter(Boolean).sort((a,b)=>a.seq-b.seq);
+  const tl = [...s.trucks].map(p=>trucks.find(t=>t.plate===p && t.status==='free' && isOnline(t))).filter(Boolean);
+  if(!jl.length || !tl.length){ toast('err','შეცდომა','მონიშნე ჯგუფი და ავტომზიდი'); return; }
+  const n = Math.min(jl.length, tl.length);
+  for(let i=0;i<n;i++) assignPair(jl[i], tl[i]);
+  s.jobs.clear(); s.trucks.clear();
+  save(); dRender(lt);
+  toast('ok','მიბმულია', n+' დავალება → '+n+' ავტომზიდი');
+}
+
+// ავტო-მიბმა: რიგის მიხედვით + GPS-ით უახლოესი თავისუფალი მანქანა ტერმინალთან
+function dAutoAssign(lt){
+  const pending = jobs.filter(j=>j.lineType===lt && j.status==='pending').sort((a,b)=>(a.seq-b.seq)||a.createdAt.localeCompare(b.createdAt));
+  let free = trucks.filter(t=>t.lineType===lt && t.status==='free' && isOnline(t));
+  if(!pending.length){ toast('err','შეცდომა','მოლოდინში დავალება არ არის'); return; }
+  if(!free.length){ toast('err','შეცდომა','თავისუფალი ავტომზიდი არ არის'); return; }
+  let n = 0;
+  for(const job of pending){
+    if(!free.length) break;
+    // უახლოესი: ტერმინალის ზონის ცენტრთან GPS-მანძილით; GPS-ის გარეშე — ბოლოში
+    const c = zoneCentroid('terminal', job.terminal);
+    free.sort((a,b)=>{
+      const da = (c && a.lat!=null) ? hav(a.lat,a.lng,c[0],c[1]) : 1e12;
+      const db = (c && b.lat!=null) ? hav(b.lat,b.lng,c[0],c[1]) : 1e12;
+      return da-db;
+    });
+    assignPair(job, free.shift());
+    n++;
+  }
+  save(); dRender(lt);
+  toast('ok','ავტო-მიბმა', n+' წყვილი (რიგით'+ (zones.some(z=>z.type==='terminal') ? ' + უახლოესი GPS-ით' : '') +')');
+}
+
+function hav(a1,o1,a2,o2){
+  const R=6371000, r=Math.PI/180;
+  const dA=(a2-a1)*r, dO=(o2-o1)*r;
+  const x=Math.sin(dA/2)**2 + Math.cos(a1*r)*Math.cos(a2*r)*Math.sin(dO/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function zoneCentroid(type, ref){
+  const z = zones.find(z=>z.type===type && String(z.ref)===String(ref));
+  if(!z || !z.points.length) return null;
+  const lat = z.points.reduce((s,p)=>s+p[0],0)/z.points.length;
+  const lng = z.points.reduce((s,p)=>s+p[1],0)/z.points.length;
+  return [lat,lng];
+}
+
+/* ════════════════════════════════════════════════════════════
+   TERMINAL — კონტეინერის მიბმა (ვალიდაციით)
+   ════════════════════════════════════════════════════════════ */
+function tmRender(){
+  const f = document.getElementById('tm-filter');
+  if(f.dataset.tv !== String(termVer)){
+    f.innerHTML = '<option value="">ყველა ტერმინალი</option>'+terminals.map(t=>'<option value="'+esc(t.name)+'">'+esc(t.name)+'</option>').join('');
+    f.dataset.tv = String(termVer);
+  }
+  const tf = f.value;
+  const live = jobs.filter(j=>!['completed'].includes(j.status) && j.status!=='pending' && (!tf || j.terminal===tf));
+  document.getElementById('tm-enroute').textContent = jobs.filter(j=>j.status==='assigned').length;
+  document.getElementById('tm-here').textContent    = jobs.filter(j=>j.status==='arrived').length;
+  document.getElementById('tm-loaded').textContent  = jobs.filter(j=>['loaded','port_arrived'].includes(j.status)).length;
+  document.getElementById('tm-wait').textContent    = jobs.filter(j=>j.status==='pending').length;
+
+  // აქტიური ფოკუსირებული ველის დაცვა re-render-ისგან
+  const fEl = document.activeElement;
+  if(fEl && fEl.classList && fEl.classList.contains('tm-cin')) return;
+
+  const order = { arrived:0, assigned:1, loaded:2, port_arrived:3 };
+  live.sort((a,b)=>(order[a.status]??9)-(order[b.status]??9) || (a.seq-b.seq));
+  document.getElementById('tm-list').innerHTML = live.length ? live.map(j=>{
+    let action;
+    if(j.status==='arrived'){
+      const rem = tmRemaining(j);
+      const dl = rem.length ? '<datalist id="dl-'+j.id+'">'+rem.slice(0,100).map(c=>'<option value="'+c+'">').join('')+'</datalist>' : '';
+      action = (rem.length?'<span class="chip-sm" style="color:var(--blue)">📋 მოთხოვნილია '+rem.length+'</span>':'')
+        +'<input class="fi tm-cin" id="ci-'+j.id+'" placeholder="MSCU1234567" maxlength="11" '
+        +(rem.length?'list="dl-'+j.id+'" ':'')
+        +'style="width:160px;text-transform:uppercase" oninput="tmValidate(this,\''+j.id+'\')" '
+        +'onkeydown="if(event.key===\'Enter\')tmLoad(\''+j.id+'\')">'+dl
+        +'<button class="btn b-green sm" onclick="tmLoad(\''+j.id+'\')">✓ დაიდო</button>';
+    } else if(j.status==='assigned'){
+      action = '<span style="font-size:11px;color:var(--purple)">🚛 გზაშია ტერმინალისკენ…</span>';
+    } else if(j.status==='loaded'){
+      action = '<span style="font-size:11px;color:var(--green)">📦 გზაშია პორტისკენ · გეითი '+esc(j.gate)+'</span>';
+    } else {
+      action = '<span style="font-size:11px;color:#047857">🏗️ პორტშია</span>';
+    }
+    return '<div class="row-item" style="gap:11px;flex-wrap:wrap">'
+      +'<span class="bdg s-'+j.status+'">'+S_LABEL[j.status]+'</span>'
+      +'<span class="mono" style="min-width:46px">'+esc(j.truck||'—')+'</span>'
+      +'<span class="pill p-'+j.lineType+'">'+(j.lineType==='medlog'?'ML':'BZ')+'</span>'
+      +'<div style="flex:1;min-width:140px;display:flex;gap:6px;flex-wrap:wrap">'
+      +'<span class="chip-sm">🏭 '+esc(j.terminal)+'</span>'
+      +'<span class="chip-sm">📦 '+esc(j.type)+' '+(j.priority==='empty'?'⬜':'🟫')+'</span>'
+      +'<span class="chip-sm" style="color:var(--cyan)">⚓ '+esc(j.pod)+'</span>'
+      +(j.container?'<span class="chip-sm mono" style="color:var(--green)">'+esc(j.container)+'</span>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center">'+action+'</div></div>';
+  }).join('') : '<div class="empty"><div class="ic">🏭</div>აქტიური ოპერაცია არ არის</div>';
+}
+
+// ამ ტერმინალზე მოთხოვნილი და ჯერ გაუტანელი კონტეინერები
+function tmRemaining(j){
+  const v = vessels.find(x=>x.id===j.vesselId);
+  const all = mf(v);
+  const hasT = all.some(e=>e.t);
+  const entries = hasT ? all.filter(e=>e.t===j.terminal) : all; // ტერმინალებიანი მანიფესტი → მკაცრად მხოლოდ თავისი
+  const used = new Set(jobs.filter(x=>x.container).map(x=>String(x.container).toUpperCase()));
+  return entries.map(e=>e.c).filter(c=>!used.has(c));
+}
+function tmCheckContainer(num, job){
+  if(!/^[A-Z]{4}\d{7}$/.test(num)) return { ok:false, msg:'ფორმატი არასწორია (4 ასო + 7 ციფრი)' };
+  const used = jobs.find(x=>x.id!==job.id && (x.container||'').toUpperCase()===num && ['loaded','port_arrived','completed'].includes(x.status));
+  if(used) return { ok:false, msg:'კონტეინერი უკვე გატანილია ტერმინალიდან' };
+  const v = vessels.find(x=>x.id===job.vesselId);
+  const m = mf(v);
+  if(m.length){
+    const e = m.find(x=>x.c===num);
+    if(!e) return { ok:false, msg:'კონტეინერი არ არის ამ გემის მანიფესტში' };
+    if(e.t && e.t!==job.terminal) return { ok:false, msg:'ეს კონტეინერი „'+e.t+'"-ზეა, არა აქ' };
+  }
+  return { ok:true };
+}
+function tmValidate(el, jobId){
+  const v = el.value.trim().toUpperCase();
+  el.classList.remove('ok','bad');
+  if(!v) return;
+  const j = jobs.find(x=>x.id===jobId);
+  if(!j) return;
+  el.classList.add(tmCheckContainer(v, j).ok ? 'ok' : 'bad');
+}
+function tmLoad(jobId){
+  const j = jobs.find(x=>x.id===jobId);
+  if(!j || j.status!=='arrived') return;
+  const el = document.getElementById('ci-'+jobId);
+  const num = (el ? el.value : '').trim().toUpperCase();
+  if(!num){ toast('err','შეცდომა','აკრიფე კონტეინერის ნომერი'); if(el)el.focus(); return; }
+  const chk = tmCheckContainer(num, j);
+  if(!chk.ok){ toast('err','ვერ დაიდო', chk.msg); return; }
+  j.container = num; j.status='loaded'; j.loadedAt = iso();
+  logAct('load','📦 '+j.truck+' → '+num+' ('+j.terminal+') · გეითი '+j.gate);
+  save(); tmRender();
+  toast('ok','დატვირთულია', j.truck+' → '+num+' · მიდის გეით '+j.gate+'-ზე');
+}
+
+/* ════════════════════════════════════════════════════════════
+   RS OPERATOR — გადაბარების ზონა, B7/B14 ცალ-ცალკე
+   ════════════════════════════════════════════════════════════ */
+let rsCurBerth = 'B7';
+function rsBerth(b){ rsCurBerth = b; rsRender(); }
+function rsRender(){
+  document.getElementById('rs-b7').className  = 'btn '+(rsCurBerth==='B7' ? 'b-blue':'b-ghost');
+  document.getElementById('rs-b14').className = 'btn '+(rsCurBerth==='B14'? 'b-blue':'b-ghost');
+  document.getElementById('rs-berthlbl').textContent = rsCurBerth;
+  const w = transferWait(rsCurBerth);
+  document.getElementById('rs-waitchip').textContent = 'ლოდინი ზონაში: '+(w!=null ? '~'+w+' წთ' : '—');
+  const q = jobs.filter(j=>j.status==='port_arrived' && j.berth===rsCurBerth)
+    .sort((a,b)=>(a.portArrivedAt||'').localeCompare(b.portArrivedAt||''));
+  document.getElementById('rs-count').textContent = q.length;
+  document.getElementById('rs-list').innerHTML = q.length ? q.map(j=>{
+    const w2 = minsBetween(j.portArrivedAt, iso());
+    return '<div class="row-item" style="gap:11px">'
+      +'<div style="flex:1"><div style="font-weight:800;font-size:14px">'+esc(j.truck)+' → <span class="mono" style="color:var(--green)">'+esc(j.container||'—')+'</span></div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(j.vesselName)+' · '+esc(j.terminal)+' · რიგი '+j.seq+' · იცდის <b style="color:'+(w2>12?'var(--red)':'var(--t2)')+'">'+w2+' წთ</b></div></div>'
+      +'<button class="btn b-red sm" onclick="rsUnloadJob(\''+j.id+'\')">🏗️ დაცლა</button></div>';
+  }).join('') : '<div class="empty"><div class="ic">🏗️</div>'+rsCurBerth+'-ის ზონაში მანქანა არ დგას</div>';
+  document.getElementById('rs-act').innerHTML = acts.filter(a=>a.type==='unload').slice(0,12).map(a=>
+    '<div class="row-item" style="padding:7px 11px"><div style="flex:1;font-size:12px">'+a.text+'</div><span style="font-size:10px;color:var(--t3)">'+fmtT(a.t)+'</span></div>'
+  ).join('') || '<div class="empty">დაცლა ჯერ არ მომხდარა</div>';
+}
+function rsUnloadJob(id){
+  const j = jobs.find(x=>x.id===id);
+  if(!j || j.status!=='port_arrived'){ toast('err','შეცდომა','დავალება ზონაში არ არის'); return; }
+  j.status='completed'; j.completedAt = iso();
+  const t = trucks.find(x=>x.plate===j.truck);
+  if(t){ t.status='free'; t.jobId=null; }
+  logAct('unload','🏗️ '+j.truck+' → '+(j.container||'—')+' დაცლილია ('+j.berth+')');
+  save(); rsRender();
+  toast('ok','დაცლილია', j.truck+' თავისუფალია · '+(j.container||''));
+}
+function rsUnload(){
+  const raw = document.getElementById('rs-in').value.trim().toUpperCase();
+  if(!raw){ toast('err','შეცდომა','შეიყვანე ნომერი'); return; }
+  const j = jobs.find(x=>x.status==='port_arrived' && x.berth===rsCurBerth
+    && ((x.truck||'').toUpperCase()===raw || (x.container||'').toUpperCase()===raw));
+  if(!j){ toast('err','ვერ მოიძებნა', raw+' — '+rsCurBerth+'-ის ზონაში არ დგას'); return; }
+  document.getElementById('rs-in').value='';
+  rsUnloadJob(j.id);
+}
+
+/* ════════════════════════════════════════════════════════════
+   DRIVER — GPS, ავტო-სტატუსები (ღილაკების გარეშე)
+   ════════════════════════════════════════════════════════════ */
+let gpsWatch = null, wakeLock = null;
+function startGps(){
+  if(!ME || ME.role!=='driver') return;
+  if(!navigator.geolocation){ document.getElementById('drv-gps').textContent='🛰️ GPS არ არის მხარდაჭერილი'; return; }
+  if('wakeLock' in navigator){ navigator.wakeLock.request('screen').then(w=>wakeLock=w).catch(()=>{}); }
+  try{ if(gpsWatch!==null) navigator.geolocation.clearWatch(gpsWatch); }catch(e){}
+  gpsWatch = navigator.geolocation.watchPosition(pos=>{
+    const t = trucks.find(x=>x.plate===ME.plate);
+    if(!t) return;
+    if((pos.coords.accuracy||0) > 150) return; // უხეში პინგი — იგნორი
+    t.lat = pos.coords.latitude; t.lng = pos.coords.longitude;
+    t.gpsTs = Date.now(); t.lastSeen = Date.now();
+    save();
+    document.getElementById('drv-gps').innerHTML = '<span style="color:var(--green)">🟢 GPS LIVE</span> '+t.lat.toFixed(5)+', '+t.lng.toFixed(5);
+  }, err=>{
+    document.getElementById('drv-gps').textContent = err.code===1
+      ? '🛰️ GPS აკრძალულია — ჩართე ბრაუზერის პარამეტრებიდან'
+      : '🛰️ GPS სიგნალი ვერ მოიძებნა (HTTPS საჭიროა)';
+  }, { enableHighAccuracy:true, maximumAge:3000, timeout:30000 });
+}
+function stopGps(){
+  try{ if(gpsWatch!==null && navigator.geolocation) navigator.geolocation.clearWatch(gpsWatch); }catch(e){}
+  gpsWatch = null;
+  if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock=null; }
+}
+
+function drvRender(){
+  if(!ME || ME.role!=='driver'){
+    document.getElementById('drv-name').textContent = '—';
+  } else {
+    const t = trucks.find(x=>x.plate===ME.plate);
+    document.getElementById('drv-name').textContent = t ? t.driver+' · '+t.plate+' · '+FLEET_LBL[t.lineType] : ME.plate;
+  }
+  const plate = ME && ME.plate ? ME.plate : null;
+  const body = document.getElementById('drv-body');
+  if(!plate){ body.innerHTML = '<div class="empty" style="padding:50px"><div class="ic">🚛</div>მძღოლის ანგარიშით შესვლისას აქ თქვენი დავალება ჩანს</div>'; return; }
+  const j = jobs.find(x=>x.truck===plate && x.status!=='completed');
+  if(!j){
+    const hist = jobs.filter(x=>x.truck===plate && x.status==='completed')
+      .sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||'')).slice(0,15);
+    body.innerHTML = '<div class="empty" style="padding:44px"><div class="ic">📭</div><b>დავალება არ არის</b><br>დისპეჩერი მოგაბამთ — გამოჩნდება ავტომატურად</div>'
+      + (hist.length ? '<div style="padding:0 16px 16px"><div class="dl" style="margin-bottom:8px">დღევანდელი რეისები</div>'
+        + hist.map(h=>'<div class="row-item"><div style="flex:1"><b class="mono">'+esc(h.container||'—')+'</b>'
+          +'<div style="font-size:11px;color:var(--t3)">'+esc(h.terminal)+' · '+esc(h.berth)+' · '+fmtT(h.completedAt)
+          +(minsBetween(h.assignedAt,h.completedAt)!=null?' · <b>'+minsBetween(h.assignedAt,h.completedAt)+'წთ</b>':'')+'</div></div></div>').join('')+'</div>' : '');
+    return;
+  }
+  const steps = ['assigned','arrived','loaded','port_arrived'];
+  const stepLbl = { assigned:'1 · წადი ტერმინალზე', arrived:'2 · ტერმინალზე ხარ — ელოდე კონტეინერს', loaded:'3 · წადი პორტში', port_arrived:'4 · ზონაში ხარ — რიჩსტაკერი დაგცლის' };
+  const idx = steps.indexOf(j.status);
+  const colors = { assigned:'var(--purple)', arrived:'var(--cyan)', loaded:'var(--green)', port_arrived:'#047857' };
+  let inner = '<div><div class="dl">ეტაპი</div><div class="dv" style="font-size:17px;color:'+colors[j.status]+'">'+stepLbl[j.status]+'</div></div><div class="hr"></div>';
+  if(j.status==='assigned' || j.status==='arrived'){
+    inner += '<div><div class="dl">ტერმინალი</div><div class="dv" style="color:var(--blue)">'+esc(j.terminal)+'</div></div><div class="hr"></div>';
+  }
+  if(j.status==='loaded' || j.status==='port_arrived'){
+    inner += '<div><div class="dl">კონტეინერი</div><div class="dv" style="color:var(--green);font-size:20px">'+esc(j.container||'—')+'</div></div><div class="hr"></div>'
+      +'<div class="gate-big"><div><div class="dl">შედი გეითზე</div><div style="font-size:11px;color:var(--t3)">'+esc(j.berth)+' ნავმისადგომი</div></div>'
+      +'<div class="num">'+esc(j.gate)+'</div></div><div class="hr"></div>';
+  }
+  inner += '<div><div class="dl">დეტალები</div><div style="font-size:13px;color:var(--t2);line-height:1.9">'
+    +'🚢 '+esc(j.vesselName)+' · '+esc(j.berth)+'<br>📦 '+esc(j.type)+' · '+(j.priority==='empty'?'ცარიელი':'სავსე')+' · ⚓ '+esc(j.pod)
+    +'<br>'+(j.mode==='prestage'?'📦 წინასწარი შემოტანა (ეზოში)':'🏗️ პირდაპირი (გემზე)')+' · რიგი '+j.seq+'</div></div>';
+  body.innerHTML =
+    '<div class="drv-card"><div class="drv-hd" style="background:'+(j.status==='loaded'?'var(--green-bg)':j.status==='arrived'?'var(--cyan-bg)':j.status==='port_arrived'?'rgba(5,150,105,.15)':'var(--purple-bg)')+'">'
+    +'<b style="font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:'+colors[j.status]+'">დავალება მიმდინარეობს</b>'
+    +'<span class="bdg s-'+j.status+'">'+S_LABEL[j.status]+'</span></div>'
+    +'<div class="drv-bd">'+inner+'</div></div>'
+    +'<div style="padding:0 14px"><div style="display:flex;gap:5px">'
+    + steps.map((s,i)=>'<div style="flex:1;height:6px;border-radius:3px;background:'+(i<=idx?colors[j.status]:'var(--bg3)')+'"></div>').join('')
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-top:9px;line-height:1.7;text-align:center">სტატუსები ავტომატურად იცვლება GPS-ით — ზონაში შესვლისას სისტემა თვითონ დაადასტურებს.<br>პრობლემისას დაუკავშირდი დისპეჩერს.</div></div>';
+}
+
+/* ════════════════════════════════════════════════════════════
+   GEOFENCE ძრავა — ავტომატური სტატუსები, ღილაკების გარეშე
+   - 3 ზედიზედ ტიკი (≈12წმ) ზონაში = დადასტურება (GPS-ის ხტომის დაცვა)
+   - assigned + თავისი ტერმინალის ზონა → arrived
+   - loaded + სწორი გეითის ზონა → port_arrived; არასწორი გეითი → alert
+   - 3+ მანქანა ჩერდება rail-ზონაში → „გადასასვლელი დაკეტილია"
+   ════════════════════════════════════════════════════════════ */
+const GEO_CONFIRM = 3;
+const RAIL_DWELL  = 18;   // ≈72წმ
+const geoCnt = {};        // "plate|zoneId" → ზედიზედ ტიკები ზონაში
+const alertSeen = {};
+
+function pip(lat, lng, pts){ // ray casting
+  let inside = false;
+  for(let i=0, k=pts.length-1; i<pts.length; k=i++){
+    const yi=pts[i][0], xi=pts[i][1], yk=pts[k][0], xk=pts[k][1];
+    if(((yi>lat)!==(yk>lat)) && (lng < (xk-xi)*(lat-yi)/(yk-yi)+xi)) inside = !inside;
+  }
+  return inside;
+}
+function alertOnce(key, text){
+  const now = Date.now();
+  if(alertSeen[key] && now-alertSeen[key] < 120000) return;
+  alertSeen[key] = now;
+  alerts.unshift({ key, text, t: now });
+  if(alerts.length>20) alerts.length=20;
+  toast('err','⚠️ გაფრთხილება', text);
+  logAct('alert','⚠️ '+text);
+}
+
+function geoTick(){
+  const now = Date.now();
+  let changed = false;
+  trucks.forEach(t=>{
+    const fresh = t.lat!=null && (now - (t.gpsTs||0)) < 180000;
+    zones.forEach(z=>{
+      const key = t.plate+'|'+z.id;
+      if(fresh && pip(t.lat, t.lng, z.points)) geoCnt[key]=(geoCnt[key]||0)+1;
+      else geoCnt[key]=0;
+    });
+    if(!fresh) return;
+    const j = jobs.find(x=>x.truck===t.plate && x.status!=='completed');
+    if(!j) return;
+    if(j.status==='assigned'){
+      const z = zones.find(z=>z.type==='terminal' && z.ref===j.terminal && (geoCnt[t.plate+'|'+z.id]||0)>=GEO_CONFIRM);
+      if(z){
+        j.status='arrived'; j.arrivedAt=iso(); changed=true;
+        logAct('geo','📍 '+t.plate+' ავტომატურად დაფიქსირდა: '+j.terminal);
+        toast('ok','📍 ტერმინალზეა', t.plate+' → '+j.terminal+' (geofence)');
+      }
+    } else if(j.status==='loaded'){
+      for(const z of zones.filter(z=>z.type==='gate')){
+        if((geoCnt[t.plate+'|'+z.id]||0) >= GEO_CONFIRM){
+          if(String(z.ref)===String(j.gate)){
+            j.status='port_arrived'; j.portArrivedAt=iso(); changed=true;
+            logAct('geo','📍 '+t.plate+' შევიდა გეით '+z.ref+'-ზე → '+j.berth+' ზონა');
+            toast('ok','📍 პორტშია', t.plate+' · გეითი '+z.ref);
+          } else {
+            alertOnce('wg|'+j.id+'|'+z.ref, t.plate+' არასწორ გეითზეა ('+z.ref+' ≠ '+j.gate+')');
+          }
+          break;
+        }
+      }
+    }
+  });
+  // რკინიგზის გადასასვლელი
+  zones.filter(z=>z.type==='rail').forEach(z=>{
+    const stuck = trucks.filter(t=>(geoCnt[t.plate+'|'+z.id]||0) >= RAIL_DWELL).length;
+    if(stuck >= 3) alertOnce('rail|'+z.id, '🚂 '+z.name+' — სავარაუდოდ დაკეტილია ('+stuck+' მანქანა დგას)');
+  });
+  if(changed){ save(); render(); }
+}
+setInterval(geoTick, 4000);
+
+/* ════════════════════════════════════════════════════════════
+   LIVE MAP — Leaflet
+   ════════════════════════════════════════════════════════════ */
+const POTI = [42.146, 41.672];
+let lmap=null, lmarks={}, llines={}, lzonesLayer=null;
+const ZCOLOR = { terminal:'#2563eb', gate:'#101828', transfer:'#059669', rail:'#dc2626' };
+
+function mapShow(){
+  if(!window.L) return;
+  if(!lmap){
+    lmap = L.map('lmap').setView(POTI, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(lmap);
+  }
+  setTimeout(()=>lmap.invalidateSize(), 80);
+  mapRefresh();
+}
+
+function mapDrawZones(map, layerRefSetter, existing){
+  if(existing) existing.remove();
+  const grp = L.layerGroup();
+  zones.forEach(z=>{
+    const c = ZCOLOR[z.type] || '#666';
+    L.polygon(z.points, { color:c, weight:2, fillColor:c, fillOpacity:.13 })
+      .bindTooltip(z.name, {permanent:false}).addTo(grp);
+  });
+  grp.addTo(map);
+  layerRefSetter(grp);
+}
+
+function mapRefresh(){
+  if(!lmap || curView!=='map') return;
+  mapDrawZones(lmap, g=>lzonesLayer=g, lzonesLayer);
+  const now = Date.now();
+  const SCOL = { pending:'#d97706', assigned:'#7c3aed', arrived:'#0891b2', loaded:'#059669', port_arrived:'#047857', free:'#64748b' };
+  const online = trucks.filter(t=> t.status==='busy' || (now-(t.lastSeen||0))<90000 || (t.lat!=null && (now-(t.gpsTs||0))<300000) );
+  let listHtml='', mapped=0;
+  const seen = new Set();
+  online.forEach(t=>{
+    seen.add(t.plate);
+    const j = jobs.find(x=>x.truck===t.plate && x.status!=='completed');
+    const st = j ? j.status : 'free';
+    const col = SCOL[st] || '#64748b';
+    const hasGps = t.lat!=null && (now-(t.gpsTs||0)) < 24*3600e3;
+    if(hasGps){
+      mapped++;
+      const icon = L.divIcon({ className:'', iconSize:[58,34], iconAnchor:[29,34],
+        html:'<div style="text-align:center"><div style="background:'+col+';color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+esc(t.plate)+'</div><div style="font-size:19px;line-height:1.1">🚛</div></div>' });
+      const pop = '<b>'+esc(t.plate)+'</b> · '+esc(t.driver)+'<br>'+FLEET_LBL[t.lineType]
+        + (j ? '<br>📦 '+esc(j.container||'(ჯერ არა)')+'<br>🏭 '+esc(j.terminal)+' → ⚓ '+esc(j.berth)+' · გეითი '+esc(j.gate)+'<br><span style="color:'+col+';font-weight:700">'+S_LABEL[st]+'</span>' : '<br>თავისუფალია');
+      if(lmarks[t.plate]){ lmarks[t.plate].setLatLng([t.lat,t.lng]).setIcon(icon).setPopupContent(pop); }
+      else lmarks[t.plate] = L.marker([t.lat,t.lng],{icon}).bindPopup(pop).addTo(lmap);
+      // დანიშნულების ხაზი
+      if(llines[t.plate]){ llines[t.plate].remove(); delete llines[t.plate]; }
+      let dest = null;
+      if(j){
+        if(j.status==='assigned' || j.status==='arrived') dest = zoneCentroid('terminal', j.terminal);
+        else if(j.status==='loaded') dest = zoneCentroid('gate', j.gate);
+      }
+      if(dest) llines[t.plate] = L.polyline([[t.lat,t.lng],dest],{color:col,weight:2,dashArray:'6 6',opacity:.6}).addTo(lmap);
+    }
+    listHtml += '<div class="row-item" style="border-left:3px solid '+col+';cursor:'+(hasGps?'pointer':'default')+'" '
+      +(hasGps?'onclick="mapFocus(\''+t.plate+'\')"':'')+'>'
+      +'<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<b class="mono" style="font-size:12px">'+esc(t.plate)+'</b>'
+      +'<span style="font-size:10px;font-weight:700;color:'+col+'">'+(j?S_LABEL[st]:'თავის.')+'</span></div>'
+      +'<div style="font-size:10px;color:var(--t3)">'+esc(t.driver)+' · '+(t.lineType==='medlog'?'🟠':'🔵')
+      +(j&&j.container?' · 📦'+esc(j.container):'')
+      +(j?' · გ'+esc(j.gate):'')+'</div>'
+      +(hasGps?'':'<div style="font-size:10px;color:var(--amber)">⚠️ GPS არ მოდის</div>')+'</div></div>';
+  });
+  Object.keys(lmarks).forEach(p=>{ if(!seen.has(p)){ lmarks[p].remove(); delete lmarks[p]; if(llines[p]){llines[p].remove();delete llines[p];} } });
+  document.getElementById('map-count').textContent = online.length+' ონლაინ · '+mapped+' რუკაზე';
+  document.getElementById('map-list').innerHTML = listHtml || '<div class="empty"><div class="ic">🚛</div>ონლაინ მანქანა არ არის</div>';
+  const recent = alerts.filter(a=>Date.now()-a.t < 300000);
+  document.getElementById('map-alerts').innerHTML = recent.map(a=>'<div class="alert-bar">⚠️ '+esc(a.text)+'<span style="margin-left:auto;font-size:10px;font-weight:400">'+new Date(a.t).toLocaleTimeString('ka-GE',{hour12:false})+'</span></div>').join('');
+}
+function mapFocus(plate){
+  const t = trucks.find(x=>x.plate===plate);
+  if(t && t.lat!=null && lmap){ lmap.setView([t.lat,t.lng],16); if(lmarks[plate]) lmarks[plate].openPopup(); }
+}
+function mapCenterAll(){
+  if(!lmap) return;
+  const pts = trucks.filter(t=>t.lat!=null).map(t=>[t.lat,t.lng]);
+  zones.forEach(z=>z.points.forEach(p=>pts.push(p)));
+  if(!pts.length) lmap.setView(POTI,13);
+  else if(pts.length===1) lmap.setView(pts[0],15);
+  else lmap.fitBounds(pts,{padding:[40,40]});
+}
+setInterval(()=>{ if(curView==='map') mapRefresh(); }, 4000);
+// დისპეჩერის ხედი ავტომატურად განახლდეს — ავტომზიდის ონლაინ/ოფლაინ სტატუსი ცოცხალი იყოს
+setInterval(()=>{
+  if(curView==='dispatch-medlog') dRender('medlog');
+  else if(curView==='dispatch-birzha') dRender('birzha');
+}, 5000);
+
+/* ════════════════════════════════════════════════════════════
+   ZONES EDITOR — პოლიგონის ხაზვა დაწკაპუნებით
+   ════════════════════════════════════════════════════════════ */
+let zmap=null, zDrawing=false, zPts=[], zTempLayer=null, zZonesLayer=null;
+
+function zShow(){
+  if(!window.L) return;
+  if(!zmap){
+    zmap = L.map('zmap').setView(POTI, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(zmap);
+    zmap.on('click', e=>{
+      if(!zDrawing) return;
+      zPts.push([e.latlng.lat, e.latlng.lng]);
+      zRedrawTemp();
+    });
+  }
+  setTimeout(()=>zmap.invalidateSize(), 80);
+  zTypeChanged();
+  zRenderList();
+  mapDrawZones(zmap, g=>zZonesLayer=g, zZonesLayer);
+}
+function zTypeChanged(){
+  const t = document.getElementById('z-type').value;
+  const r = document.getElementById('z-ref');
+  if(t==='terminal') r.innerHTML = terminals.map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join('');
+  else if(t==='gate') r.innerHTML = '<option value="1">გეითი 1</option><option value="2">გეითი 2</option><option value="3">გეითი 3</option>';
+  else if(t==='transfer') r.innerHTML = '<option value="B7">B7 ზონა</option><option value="B14">B14 ზონა</option>';
+  else r.innerHTML = '<option value="rail1">გადასასვლელი 1</option><option value="rail2">გადასასვლელი 2</option><option value="rail3">გადასასვლელი 3</option>';
+}
+function zStart(){
+  zDrawing = true; zPts = [];
+  document.getElementById('z-start').classList.add('hidden');
+  document.getElementById('z-finish').classList.remove('hidden');
+  document.getElementById('z-cancel').classList.remove('hidden');
+  document.getElementById('z-hint').textContent = 'დააწკაპუნე რუკაზე წერტილები (მინ. 3), მერე „დასრულება"';
+}
+function zRedrawTemp(){
+  if(zTempLayer){ zTempLayer.remove(); zTempLayer=null; }
+  if(!zPts.length) return;
+  zTempLayer = L.layerGroup();
+  zPts.forEach(p=>L.circleMarker(p,{radius:4,color:'#dc2626'}).addTo(zTempLayer));
+  if(zPts.length>=2) L.polyline(zPts,{color:'#dc2626',weight:2,dashArray:'4 4'}).addTo(zTempLayer);
+  if(zPts.length>=3) L.polygon(zPts,{color:'#dc2626',weight:1,fillOpacity:.1}).addTo(zTempLayer);
+  zTempLayer.addTo(zmap);
+}
+function zFinish(){
+  if(zPts.length < 3){ toast('err','შეცდომა','მინიმუმ 3 წერტილია საჭირო'); return; }
+  const type = document.getElementById('z-type').value;
+  const ref  = document.getElementById('z-ref').value;
+  const names = { terminal:'🏭 ', gate:'🚧 გეითი ', transfer:'🏗️ გადაბარება ', rail:'🚂 ' };
+  // ერთ ref-ზე ერთი ზონა — ძველი ჩანაცვლდება
+  zones = zones.filter(z=>!(z.type===type && String(z.ref)===String(ref)));
+  zones.push({ id:uid('z'), type, ref, name:(names[type]||'')+ref, points:zPts.slice() });
+  zCancel(); save(); zRenderList();
+  mapDrawZones(zmap, g=>zZonesLayer=g, zZonesLayer);
+  toast('ok','ზონა შენახულია', (names[type]||'')+ref);
+}
+function zCancel(){
+  zDrawing=false; zPts=[];
+  if(zTempLayer){ zTempLayer.remove(); zTempLayer=null; }
+  document.getElementById('z-start').classList.remove('hidden');
+  document.getElementById('z-finish').classList.add('hidden');
+  document.getElementById('z-cancel').classList.add('hidden');
+  document.getElementById('z-hint').textContent = 'აირჩიე ტიპი და დააჭირე „ხაზვის დაწყება"';
+}
+function zDelete(id){
+  const z = zones.find(x=>x.id===id); if(!z) return;
+  if(!confirm('წავშალო ზონა „'+z.name+'"?')) return;
+  zones = zones.filter(x=>x.id!==id);
+  save(); zRenderList();
+  mapDrawZones(zmap, g=>zZonesLayer=g, zZonesLayer);
+}
+function zRenderList(){
+  document.getElementById('z-list').innerHTML = zones.length ? zones.map(z=>
+    '<div class="row-item"><i style="width:11px;height:11px;border-radius:3px;background:'+(ZCOLOR[z.type]||'#666')+';flex-shrink:0"></i>'
+    +'<div style="flex:1;font-size:12px;font-weight:700">'+esc(z.name)+'<div style="font-size:10px;color:var(--t3);font-weight:400">'+z.points.length+' წერტილი</div></div>'
+    +'<button class="btn b-ghost xs" onclick="zFocus(\''+z.id+'\')">🎯</button>'
+    +'<button class="btn b-red xs" onclick="zDelete(\''+z.id+'\')">🗑</button></div>'
+  ).join('') : '<div class="empty"><div class="ic">📐</div>ზონა არ არის დახაზული<br><span style="font-size:10px">დაიწყე ტერმინალებითა და გეითებით</span></div>';
+}
+function zFocus(id){
+  const z = zones.find(x=>x.id===id);
+  if(z && zmap) zmap.fitBounds(z.points, {padding:[40,40]});
+}
+
+/* ════════════════════════════════════════════════════════════
+   REGISTRY + ექსპორტი + ხელით ჩარევა (fallback)
+   ════════════════════════════════════════════════════════════ */
+function regRender(){
+  const q  = (document.getElementById('reg-q').value||'').toLowerCase();
+  const st = document.getElementById('reg-st').value;
+  let list = jobs.slice();
+  if(st) list = list.filter(j=>j.status===st);
+  if(q) list = list.filter(j=>[j.vesselName,j.truck,j.container,j.terminal,j.pod].some(x=>(x||'').toLowerCase().includes(q)));
+  list.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  document.getElementById('reg-count').textContent = list.length;
+  const canEdit = ME && ['admin','planner','dispatch-medlog','dispatch-birzha'].includes(ME.role);
+  const head = '<tr><th>#</th><th>სტატუსი</th><th>გემი</th><th>ფლოტი</th><th>ტერმინალი</th><th>მანქანა</th><th>კონტეინერი</th><th>გეითი</th><th>რიგი</th><th>მიბმა</th><th>ტერმ.</th><th>დატვ.</th><th>პორტი</th><th>დასრ.</th><th>ციკლი</th>'+(canEdit?'<th>ჩარევა</th>':'')+'</tr>';
+  const rows = list.slice(0,400).map((j,i)=>{
+    const cyc = minsBetween(j.assignedAt, j.completedAt);
+    const sopts = Object.keys(S_LABEL).map(s=>'<option value="'+s+'" '+(s===j.status?'selected':'')+'>'+S_LABEL[s]+'</option>').join('');
+    return '<tr><td style="color:var(--t3)">'+(i+1)+'</td>'
+      +'<td><span class="bdg s-'+j.status+'">'+S_LABEL[j.status]+'</span></td>'
+      +'<td><b>'+esc(j.vesselName)+'</b></td>'
+      +'<td><span class="pill p-'+j.lineType+'">'+(j.lineType==='medlog'?'ML':'BZ')+'</span></td>'
+      +'<td>'+esc(j.terminal)+'</td>'
+      +'<td class="mono">'+esc(j.truck||'—')+'</td>'
+      +'<td class="mono" style="color:var(--green)">'+esc(j.container||'—')+'</td>'
+      +'<td>'+esc(j.gate)+'</td><td>'+j.seq+'</td>'
+      +'<td style="font-size:11px">'+fmtT(j.assignedAt)+'</td>'
+      +'<td style="font-size:11px">'+fmtT(j.arrivedAt)+'</td>'
+      +'<td style="font-size:11px">'+fmtT(j.loadedAt)+'</td>'
+      +'<td style="font-size:11px">'+fmtT(j.portArrivedAt)+'</td>'
+      +'<td style="font-size:11px">'+fmtT(j.completedAt)+'</td>'
+      +'<td><b style="color:'+(cyc==null?'var(--t3)':cyc<=40?'var(--green)':cyc<=70?'var(--amber)':'var(--red)')+'">'+(cyc==null?'—':cyc+'წთ')+'</b></td>'
+      +(canEdit?'<td><select class="fs" style="width:115px;padding:3px 6px;font-size:11px" onchange="regOverride(\''+j.id+'\',this.value)">'+sopts+'</select></td>':'')
+      +'</tr>';
+  }).join('');
+  document.getElementById('reg-tb').innerHTML = head + (rows || '<tr><td colspan="16" style="text-align:center;padding:26px;color:var(--t3)">ჩანაწერი ვერ მოიძებნა</td></tr>');
+}
+// ხელით ჩარევა — GPS-ჩავარდნის fallback
+function regOverride(jobId, newStatus){
+  const j = jobs.find(x=>x.id===jobId);
+  if(!j || j.status===newStatus) return;
+  if(!confirm(j.truck+' / '+j.vesselName+': სტატუსი ხელით → „'+S_LABEL[newStatus]+'"?')){ regRender(); return; }
+  const order = ['pending','assigned','arrived','loaded','port_arrived','completed'];
+  j.status = newStatus;
+  const ts = { assigned:'assignedAt', arrived:'arrivedAt', loaded:'loadedAt', port_arrived:'portArrivedAt', completed:'completedAt' };
+  if(ts[newStatus] && !j[ts[newStatus]]) j[ts[newStatus]] = iso();
+  const t = trucks.find(x=>x.plate===j.truck);
+  if(t){
+    if(newStatus==='completed' || newStatus==='pending'){ t.status='free'; t.jobId=null; if(newStatus==='pending'){ j.truck=''; j.assignedAt=null; } }
+    else { t.status='busy'; t.jobId=j.id; }
+  }
+  logAct('override','✏️ ხელით ჩარევა: '+ (j.truck||'—') +' → '+S_LABEL[newStatus]+' ('+(ME?ME.username:'')+')');
+  save(); regRender();
+  toast('info','შეიცვალა', S_LABEL[newStatus]);
+}
+
+function csvDownload(name, rows){
+  const csv = '\uFEFF' + rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function jobRowsCsv(list){
+  const head = ['#','სტატუსი','გემი','ფლოტი','ნავმისადგომი','გეითი','რიგი','რეჟიმი','ტერმინალი','მანქანა','კონტეინერი','ტიპი','სავსე/ცარ.','POD','მიბმა','ტერმინალში','დატვირთვა','პორტში','დაცლა','მიბმა→ტერმ წთ','ტერმ→დატვ წთ','დატვ→პორტი წთ','პორტი→დაცლა წთ','სულ წთ'];
+  const rows = list.map((j,i)=>[i+1, S_LABEL[j.status], j.vesselName, j.lineType==='medlog'?'მედლოგი':'ბირჟა',
+    j.berth, j.gate, j.seq, j.mode==='prestage'?'წინასწარი':'პირდაპირი', j.terminal, j.truck, j.container,
+    j.type, j.priority==='empty'?'ცარიელი':'სავსე', j.pod,
+    fmtT(j.assignedAt), fmtT(j.arrivedAt), fmtT(j.loadedAt), fmtT(j.portArrivedAt), fmtT(j.completedAt),
+    minsBetween(j.assignedAt,j.arrivedAt)??'', minsBetween(j.arrivedAt,j.loadedAt)??'',
+    minsBetween(j.loadedAt,j.portArrivedAt)??'', minsBetween(j.portArrivedAt,j.completedAt)??'',
+    minsBetween(j.assignedAt,j.completedAt)??'' ]);
+  return [head, ...rows];
+}
+function regExport(){
+  csvDownload('registry_'+new Date().toISOString().slice(0,10)+'.csv', jobRowsCsv(jobs));
+  toast('ok','ექსპორტი','CSV ჩამოიწერა (Excel-ში იხსნება)');
+}
+function exportVesselReport(v){
+  const vj = jobs.filter(j=>j.vesselId===v.id).sort((a,b)=>(a.seq-b.seq)||(a.createdAt||'').localeCompare(b.createdAt||''));
+  csvDownload(v.name.replace(/[^\w]+/g,'_')+'_report.csv', jobRowsCsv(vj));
+}
+
+/* ════════════════════════════════════════════════════════════
+   TERMINALS მენეჯმენტი — სახელი ვრცელდება დავალებებზე, ზონებზე, dropdown-ებზე
+   ════════════════════════════════════════════════════════════ */
+let termVer = 1;
+function termAdd(){
+  const name = document.getElementById('tr-name').value.trim();
+  const code = document.getElementById('tr-code').value.trim().toUpperCase();
+  if(!name){ toast('err','შეცდომა','შეიყვანე ტერმინალის სახელი'); return; }
+  if(terminals.some(t=>t.name===name)){ toast('err','შეცდომა','ეს სახელი უკვე არსებობს'); return; }
+  terminals.push({ name, code: code || '—' });
+  termVer++;
+  document.getElementById('tr-name').value=''; document.getElementById('tr-code').value='';
+  logAct('term','🏭 დაემატა ტერმინალი: '+name);
+  save(); setRender();
+  toast('ok','დაემატა', name);
+}
+function termRename(oldName){
+  const t = terminals.find(x=>x.name===oldName); if(!t) return;
+  const name = (prompt('ახალი სახელი:', t.name)||'').trim();
+  if(!name || name===t.name) return;
+  if(terminals.some(x=>x.name===name)){ toast('err','შეცდომა','ეს სახელი უკვე არსებობს'); return; }
+  const code = (prompt('კოდი:', t.code)||t.code).trim().toUpperCase();
+  // გავრცელება: დავალებები (ყველა სტატუსი — ისტორიაც თანმიმდევრული რჩება) + geofence ზონა
+  jobs.forEach(j=>{ if(j.terminal===oldName) j.terminal=name; });
+  zones.forEach(z=>{ if(z.type==='terminal' && z.ref===oldName){ z.ref=name; z.name='🏭 '+name; } });
+  t.name = name; t.code = code;
+  termVer++;
+  logAct('term','✏️ ტერმინალი გადაერქვა: '+oldName+' → '+name);
+  save(); setRender();
+  toast('ok','გადაერქვა', oldName+' → '+name);
+}
+function termDel(name){
+  const open = jobs.filter(j=>j.terminal===name && j.status!=='completed');
+  if(open.length){ toast('err','ვერ წაიშლება', open.length+' ღია დავალება აქვს ამ ტერმინალზე'); return; }
+  if(!confirm('წავშალო „'+name+'"? მისი დახაზული ზონაც წაიშლება.')) return;
+  terminals = terminals.filter(t=>t.name!==name);
+  zones = zones.filter(z=>!(z.type==='terminal' && z.ref===name));
+  termVer++;
+  logAct('term','🗑 წაიშალა ტერმინალი: '+name);
+  save(); setRender();
+  toast('info','წაიშალა', name);
+}
+
+/* ════════════════════════════════════════════════════════════
+   ARCHIVE — გასული გემები
+   ════════════════════════════════════════════════════════════ */
+function archRender(){
+  const dep = vessels.filter(v=>v.status==='departed')
+    .sort((a,b)=>(b.departedAt||'').localeCompare(a.departedAt||''));
+  document.getElementById('arch-count').textContent = dep.length;
+  document.getElementById('arch-list').innerHTML = dep.length ? dep.map(v=>{
+    const vj = jobs.filter(j=>j.vesselId===v.id);
+    const done = vj.filter(j=>j.status==='completed');
+    const cycles = done.map(j=>minsBetween(j.assignedAt,j.completedAt)).filter(x=>x!=null);
+    const avgCyc = cycles.length ? Math.round(cycles.reduce((s,x)=>s+x,0)/cycles.length) : null;
+    return '<div class="row-item" style="flex-direction:column;align-items:stretch">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<strong style="font-size:15px">'+esc(v.name)+'</strong>'
+      +'<span class="pill p-'+v.lineType+'">'+(v.lineType==='medlog'?'MSC · მედლოგი':'ბირჟა')+'</span>'
+      +'<span class="chip-sm">⚓ '+esc(v.berth)+'</span>'
+      +'<span class="chip-sm">ETB '+esc(v.eta||'—')+'</span>'
+      +'<span class="chip-sm" style="color:var(--red)">⛴ გავიდა '+fmtT(v.departedAt)+'</span></div>'
+      +'<div style="font-size:12px;color:var(--t2);margin-top:6px">გეგმა: <b>'+(v.plan||0)+'</b> · შესრულდა: <b style="color:var(--green)">'+done.length+'</b> რეისი'
+      +(avgCyc!=null?' · საშ. ციკლი: <b>'+avgCyc+' წთ</b>':'')
+      +(v.manifest && v.manifest.length?' · მანიფესტი: '+v.manifest.length+' კონტ.':'')+'</div>'
+      +'<div style="display:flex;gap:6px;margin-top:8px">'
+      +'<button class="btn b-green xs" onclick="exportVesselReport(vessels.find(x=>x.id===\''+v.id+'\'))">⬇ ანგარიში (CSV)</button>'
+      +'<button class="btn b-red xs" onclick="archDelete(\''+v.id+'\')">🗑 სამუდამოდ წაშლა</button>'
+      +'</div></div>';
+  }).join('') : '<div class="empty"><div class="ic">🗄️</div>არქივი ცარიელია — გემის „⛴ გასვლის" შემდეგ აქ გადმოვა</div>';
+}
+function archDelete(id){
+  const v = vessels.find(x=>x.id===id); if(!v) return;
+  if(!confirm('„'+v.name+'" და მისი ისტორია (დავალებები) სამუდამოდ წაიშალოს? ჯერ ჩამოწერე ანგარიში თუ გჭირდება.')) return;
+  vessels = vessels.filter(x=>x.id!==id);
+  jobs = jobs.filter(j=>j.vesselId!==id);
+  logAct('arch','🗑 არქივიდან წაიშალა: '+v.name);
+  save(); archRender();
+  toast('info','წაიშალა', v.name);
+}
+
+/* ════════════════════════════════════════════════════════════
+   SETTINGS — პარამეტრები + ფლოტის მართვა
+   ════════════════════════════════════════════════════════════ */
+function setRender(){
+  document.getElementById('s-crane').value = SET.craneRate;
+  document.getElementById('s-rs').value    = SET.rsRate;
+  document.getElementById('s-rsn').value   = SET.rsPerBerth;
+  document.getElementById('s-cyc').value   = SET.defaultCycleMin;
+  document.getElementById('s-gml').value   = SET.gateMedlog;
+  document.getElementById('s-gb7').value   = SET.gateBirzhaB7;
+  document.getElementById('s-gb14').value  = SET.gateBirzhaB14;
+  const ml = trucks.filter(t=>t.lineType==='medlog'), bz = trucks.filter(t=>t.lineType==='birzha');
+  document.getElementById('t-count').textContent = '🟠 '+ml.length+' · 🔵 '+bz.length;
+  document.getElementById('t-list').innerHTML = trucks.map(t=>
+    '<div class="row-item" style="border-left:3px solid var(--'+t.lineType+')">'
+    +'<div style="flex:1"><b class="mono">'+esc(t.plate)+'</b> <span class="pill p-'+t.lineType+'">'+(t.lineType==='medlog'?'ML':'BZ')+'</span>'
+    +'<div style="font-size:11px;color:var(--t3)">'+esc(t.driver)+'</div></div>'
+    +'<span style="font-size:11px;font-weight:700;color:'+(t.status==='free'?'var(--green)':'var(--amber)')+'">'+(t.status==='free'?'✓ თავის.':'⏳ დაკავ.')+'</span>'
+    +(t.status==='free'?'<button class="btn b-red xs" onclick="truckDel(\''+t.plate+'\')">🗑</button>':'')
+    +'</div>'
+  ).join('') || '<div class="empty">ავტომზიდი არ არის</div>';
+  // ტერმინალების სია
+  document.getElementById('tr-count').textContent = terminals.length;
+  document.getElementById('tr-list').innerHTML = terminals.map(t=>{
+    const hasZone = zones.some(z=>z.type==='terminal' && z.ref===t.name);
+    const open = jobs.filter(j=>j.terminal===t.name && j.status!=='completed').length;
+    return '<div class="row-item">'
+      +'<div style="flex:1"><b style="font-size:13px">'+esc(t.name)+'</b> <span class="chip-sm">'+esc(t.code)+'</span>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:2px">'
+      +(hasZone?'<span style="color:var(--green)">📐 ზონა დახაზულია</span>':'<span style="color:var(--amber)">📐 ზონა არ არის — geofence ვერ იმუშავებს</span>')
+      +(open?' · '+open+' ღია დავალება':'')+'</div></div>'
+      +'<button class="btn b-ghost xs" onclick="termRename(\''+esc(t.name).replace(/'/g,"\\'")+'\')">✏️</button>'
+      +'<button class="btn b-red xs" onclick="termDel(\''+esc(t.name).replace(/'/g,"\\'")+'\')">🗑</button>'
+      +'</div>';
+  }).join('') || '<div class="empty">ტერმინალი არ არის</div>';
+}
+function setSave(){
+  SET.craneRate = Math.max(5, parseInt(document.getElementById('s-crane').value)||25);
+  SET.rsRate    = Math.max(5, parseInt(document.getElementById('s-rs').value)||22);
+  SET.rsPerBerth= Math.max(1, parseInt(document.getElementById('s-rsn').value)||2);
+  SET.defaultCycleMin = Math.max(10, parseInt(document.getElementById('s-cyc').value)||50);
+  SET.gateMedlog   = document.getElementById('s-gml').value;
+  SET.gateBirzhaB7 = document.getElementById('s-gb7').value;
+  SET.gateBirzhaB14= document.getElementById('s-gb14').value;
+  // pending დავალებების გეითები ახალ წესზე გადაითვალოს
+  jobs.forEach(j=>{ if(j.status==='pending') j.gate = gateFor(j.lineType, j.berth); });
+  save();
+  toast('ok','შენახულია','პარამეტრები განახლდა');
+}
+function truckAdd(){
+  const plate = document.getElementById('t-plate').value.trim().toUpperCase();
+  const driver= document.getElementById('t-driver').value.trim();
+  const fleet = document.getElementById('t-fleet').value;
+  if(!plate || !driver){ toast('err','შეცდომა','შეიყვანე ნომერი და სახელი'); return; }
+  if(trucks.some(t=>t.plate===plate)){ toast('err','შეცდომა','ეს ნომერი უკვე არსებობს'); return; }
+  trucks.push({ plate, driver, lineType:fleet, status:'free', jobId:null, lat:null, lng:null, gpsTs:0, lastSeen:0 });
+  document.getElementById('t-plate').value=''; document.getElementById('t-driver').value='';
+  save(); setRender();
+  toast('ok','დაემატა', plate+' · ლოგინი: '+plate.toLowerCase()+' / 1234');
+}
+function truckDel(plate){
+  const t = trucks.find(x=>x.plate===plate);
+  if(!t || t.status!=='free'){ toast('err','შეცდომა','დაკავებული მანქანა ვერ წაიშლება'); return; }
+  if(!confirm('წავშალო '+plate+'?')) return;
+  trucks = trucks.filter(x=>x.plate!==plate);
+  save(); setRender();
+}
+
+/* ════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════ */
+// ჩანართებს შორის სინქრონი: როცა სხვა ჩანართი მონაცემს ცვლის,
+// აქ ცვლადები ხელახლა ჩაიტვირთება localStorage-დან და გადაიხატება.
+window.addEventListener('storage', e=>{
+  if(!e.key || !e.key.startsWith('ptos5_')) return;
+  SET      = Object.assign({}, DEF_SET, store.get('set', {}));
+  users    = store.get('users', null) || seedUsers();
+  terminals= store.get('terminals', null) || seedTerminals();
+  vessels  = store.get('vessels', []);
+  trucks   = store.get('trucks', null) || seedTrucks();
+  jobs     = store.get('jobs', []);
+  zones    = store.get('zones', []);
+  acts     = store.get('acts', []);
+  if(ME) render();
+});
+
+setInterval(()=>{ if(ME && curView!=='map' && curView!=='zones') render(); }, 5000);
+tryResume();
+setTimeout(()=>{ const el=document.getElementById('lu'); if(el && !ME) el.focus(); }, 150);
+</script>
+</body>
+</html>
